@@ -1,5 +1,6 @@
+from datetime import datetime
 from typing import Optional, List
-from sqlalchemy import ForeignKey, Integer, String, Boolean
+from sqlalchemy import ForeignKey, Integer, String, Boolean, DateTime
 from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
@@ -10,8 +11,10 @@ class Base(DeclarativeBase):
 
 
 class User(Base):
-    __tablename__ = "user"
+    __tablename__ = "users"
     email: Mapped[str] = mapped_column(String, unique=True)
+    root_folder_id: Mapped[int] = mapped_column(ForeignKey("folders.id"))
+    default_palette_id: Mapped[int] = mapped_column(ForeignKey("palettes.id"))
 
     folders: Mapped[List["Folder"]] = relationship(back_populates="user")
 
@@ -20,12 +23,12 @@ class User(Base):
 
 
 class Folder(Base):
-    __tablename__ = "folder"
-    user_id: Mapped[int] = mapped_column(ForeignKey("user.id"))
+    __tablename__ = "folders"
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
     parent_id: Mapped[Optional[int]] = mapped_column(
         ForeignKey("folder.id"), nullable=True)
     name: Mapped[str] = mapped_column(String)
-    root: Mapped[bool] = mapped_column(Boolean, default=False)
+    path: Mapped[str] = mapped_column(String)
 
     user: Mapped["User"] = relationship(back_populates="folders")
     images: Mapped[List["Image"]] = relationship(back_populates="folder")
@@ -36,15 +39,16 @@ class Folder(Base):
 
 
 class Image(Base):
-    __tablename__ = "image"
-    folder_id: Mapped[int] = mapped_column(ForeignKey("folder.id"))
-    palette_id: Mapped[int] = mapped_column(ForeignKey("palette.id"))
+    __tablename__ = "images"
+    folder_id: Mapped[int] = mapped_column(ForeignKey("folders.id"))
+    palette_id: Mapped[int] = mapped_column(ForeignKey("palettes.id"))
     width: Mapped[int] = mapped_column(Integer)
     height: Mapped[int] = mapped_column(Integer)
     name: Mapped[str] = mapped_column(String)
     base_name: Mapped[str] = mapped_column(String)
     order: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
     version: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    updated: Mapped[datetime] = mapped_column(DateTime, default=datetime.now())
 
     folder: Mapped["Folder"] = relationship(back_populates="images")
     palette: Mapped["Palette"] = relationship(back_populates="images")
@@ -55,11 +59,10 @@ class Image(Base):
 
 
 class Palette(Base):
-    __tablename__ = "palette"
+    __tablename__ = "palettes"
     folder_id: Mapped[Optional[int]] = mapped_column(
         ForeignKey("folder.id"), nullable=True)
     name: Mapped[Optional[str]] = mapped_column(String, nullable=True)
-    default: Mapped[bool] = mapped_column(Boolean, default=False)
 
     images: Mapped[List["Image"]] = relationship(back_populates="palette")
     folder: Mapped["Folder"] = relationship(back_populates="palettes")
@@ -70,9 +73,10 @@ class Palette(Base):
 
 
 class Color(Base):
-    __tablename__ = "color"
-    palette_id: Mapped[int] = mapped_column(ForeignKey("palette.id"))
+    __tablename__ = "colors"
+    palette_id: Mapped[int] = mapped_column(ForeignKey("palettes.id"))
     index: Mapped[int] = mapped_column(Integer)
+    order: Mapped[int] = mapped_column(Integer)
     red: Mapped[int] = mapped_column(Integer)
     green: Mapped[int] = mapped_column(Integer)
     blue: Mapped[int] = mapped_column(Integer)
@@ -84,8 +88,8 @@ class Color(Base):
 
 
 class Layer(Base):
-    __tablename__ = "layer"
-    image_id: Mapped[int] = mapped_column(ForeignKey("image.id"))
+    __tablename__ = "layers"
+    image_id: Mapped[int] = mapped_column(ForeignKey("images.id"))
     content: Mapped[List[int]] = mapped_column(ARRAY(Integer, dimensions=2))
     order: Mapped[int] = mapped_column(Integer)
 
@@ -96,7 +100,7 @@ class Layer(Base):
 
 
 class ColorMode(Base):
-    __tablename__ = "color_mode"
+    __tablename__ = "color_modes"
     name: Mapped[str] = mapped_column(String)
 
     def __repr__(self):
@@ -104,13 +108,14 @@ class ColorMode(Base):
 
 
 class TextLayer(Base):
-    __tablename__ = "text_layer"
-    layer_id: Mapped[int] = mapped_column(ForeignKey("layer.id"))
-    color_mode_id: Mapped[int] = mapped_column(ForeignKey("color_mode.id"))
+    __tablename__ = "text_layers"
+    layer_id: Mapped[int] = mapped_column(ForeignKey("layers.id"))
+    color_mode_id: Mapped[int] = mapped_column(ForeignKey("color_modes.id"))
     x: Mapped[int] = mapped_column(Integer)
     y: Mapped[int] = mapped_column(Integer)
     color: Mapped[int] = mapped_column(Integer)
     text: Mapped[str] = mapped_column(String)
+    font_name: Mapped[str] = mapped_column(String)
 
     def __repr__(self):
         return f"Text layer at ({self.x}, {self.y}): {self.text:20}..."
