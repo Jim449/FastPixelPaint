@@ -2,8 +2,8 @@ import React, { useState, useEffect, useRef, useCallback } from "react";
 import Menu from "src/components/Menu";
 
 export default function Paint() {
-    const [width, setWidth] = useState(400);
-    const [height, setHeight] = useState(400);
+    const [width, setWidth] = useState(300);
+    const [height, setHeight] = useState(300);
     const [coordinates, setCoordinates] = useState([0, 0]);
     const [palette, setPalette] = useState([]);
     const [menu, setMenu] = useState("");
@@ -21,12 +21,55 @@ export default function Paint() {
     let loopId;
     let menuLabels = ["File", "Edit", "View", "Settings"];
 
-    function download(filename) {
-        url = canvasRef.current.toDataURL("image/png");
+    const fileOptions = [
+        { label: "New", type: "button", action: () => { } },
+        { label: "Open", type: "button", action: () => { } },
+        { label: "Save", type: "button", action: () => { } },
+        { label: "Save next", type: "button", action: () => { } },
+        { label: "Save as...", type: "button", action: () => { } },
+        { label: "Export", type: "button", action: downloadImage },
+        { label: "Export as...", type: "button", action: () => { } },
+        { label: "Save palette", type: "button", action: () => { } },
+        { label: "Save palette as...", type: "button", action: () => { } },
+        { label: "Switch palette", type: "button", action: () => { } },
+        { label: "Open and generate palette", type: "button", action: () => { } },
+        { label: "Open with current palette", type: "button", action: () => { } },
+        { label: "Open text editor", type: "button", action: () => { } }
+    ];
+
+    // { label: "Export", type: "anchor", url: canvasRef.current.toDataURL("image/png"), download: "Image" },
+
+    const editOptions = [
+        { label: "Undo", type: "button", action: () => { } },
+        { label: "Redo", type: "button", action: () => { } },
+        { label: "Copy", type: "button", action: () => { } },
+        { label: "Cut", type: "button", action: () => { } },
+        { label: "Paste", type: "button", action: () => { } },
+        { label: "Scale image", type: "button", action: () => { } },
+        { label: "Resize canvas", type: "button", action: () => { } }
+    ];
+
+    const viewOptions = [
+        { label: "Zoom", type: "button", action: () => { } },
+        { label: "Revert zoom", type: "button", action: () => { } },
+        { label: "Toggle grid", type: "button", action: () => { } },
+        { label: "Set grid size", type: "button", action: () => { } },
+        { label: "Snap to grid", type: "button", action: () => { } },
+        { label: "Toggle transparency", type: "button", action: () => { } }
+    ];
+
+    const settingsOptions = [
+        { label: "Color mode", type: "button", action: () => { } },
+        { label: "Save actions", type: "button", action: () => { } }
+    ];
+
+
+    function downloadImage(event) {
+        let url = canvasRef.current.toDataURL("image/png");
         let a = docRef.current.createElement("a");
         a.href = url;
-        a.download = filename;
-
+        a.download = "Testfile.png";
+        a.click();
     }
 
     function onMenuOpen(event) {
@@ -38,10 +81,6 @@ export default function Paint() {
             setMenu(event.target.id);
             menuOpen.current = true;
         }
-        // if (event.target.id == "File") {
-        // console.log("Clicked on File!");
-        // setMenuOptions([{ label: "Export", type: "anchor", url: canvasRef.current.toDataURL("image/png"), download: "Image" }]);
-        // setMenu("File");
 
     }
     // Drawing in here rather than in mousemove event should be cheaper
@@ -85,12 +124,14 @@ export default function Paint() {
 
     const onDown = useCallback((event) => {
         // Called on mouse press
-        if (menuLabels.includes(event.target.id) == false) {
-            // Yeah, that works
+        let id = event.target.id;
+
+        // Closes menu. Have to be careful not to toss that menu away before click event
+        if (menuLabels.includes(id) == false && id != null && id.substr(0, 4) != "menu") {
             setMenu("");
             menuOpen.current = false;
         }
-        if (event.target.id === "canvas") {
+        if (id === "canvas") {
             canvasLeftDown = true;
         }
     }, []);
@@ -137,42 +178,42 @@ export default function Paint() {
         }
     }, [])
 
-    return <div className="flex flex-col max-h-screen bg-gray-50">
+    return <div className="flex flex-col min-h-screen max-h-screen bg-gray-50">
         <div className="flex rounded-b-lg border-b border-b-gray-300">
             <nav>
-                <ul className="flex text-sm ml-3 mt-1 gap-3">
-                    <li className="relative p-1">
+                <ul className="flex text-sm ml-3 mt-1">
+                    <li className="relative">
                         <button
                             id="File"
                             onClick={onMenuOpen}
-                            className="hover:underline">
+                            className="hover:bg-gray-200 py-1 px-3">
                             File
                         </button>
-                        {menu == "File" && <Menu></Menu>}
+                        {menu == "File" && <Menu options={fileOptions}></Menu>}
                     </li>
-                    <li className="relative p-1">
+                    <li className="relative">
                         <button
                             id="Edit"
                             onClick={onMenuOpen}
-                            className="hover:underline relative">Edit
+                            className="hover:bg-gray-200 py-1 px-3">Edit
                         </button>
-                        {menu == "Edit" && <Menu></Menu>}
+                        {menu == "Edit" && <Menu options={editOptions}></Menu>}
                     </li>
-                    <li className="relative p-1">
+                    <li className="relative">
                         <button
                             id="View"
                             onClick={onMenuOpen}
-                            className="hover:underline relative">View
+                            className="hover:bg-gray-200 py-1 px-3">View
                         </button>
-                        {menu == "View" && <Menu></Menu>}
+                        {menu == "View" && <Menu options={viewOptions}></Menu>}
                     </li>
-                    <li className="relative p-1">
+                    <li className="relative">
                         <button
                             id="Settings"
                             onClick={onMenuOpen}
-                            className="hover:underline relative">Settings
+                            className="hover:bg-gray-200 py-1 px-3">Settings
                         </button>
-                        {menu == "Settings" && <Menu></Menu>}
+                        {menu == "Settings" && <Menu options={settingsOptions}></Menu>}
                     </li>
                 </ul>
             </nav>
@@ -220,18 +261,18 @@ export default function Paint() {
         {/* Needed min-h-full to lower height and enforce scroll */}
         <div className="flex grow min-h-full">
             <div className="flex flex-col grow items-center overflow-scroll bg-gray-300">
-                <div className="bg-gray-300 w-[460px] min-h-[60px]"></div>
+                <div className="bg-gray-300 w-[360px] min-h-[60px]"></div>
                 <canvas
                     id="canvas"
                     ref={canvasRef}
                     width={width}
                     height={height}
-                    className="w-[400px] h-[400px]">
+                    className="w-[300px] h-[300px]">
                 </canvas>
-                <div className="bg-gray-300 w-[460px] min-h-[60px]"></div>
+                <div className="bg-gray-300 w-[360px] min-h-[60px]"></div>
             </div>
             <div className="flex flex-col">
-                <div className="grid grid-cols-16 gap-0 m-2">
+                <div className="grid grid-cols-16 gap-0 p-1 m-1 bg-gray-100 border border-gray-300">
                     {palette.map((color) => <div
                         key={color.index}
                         className={"size-3 border border-t-gray-800 border-l-gray-800 border-b-gray-300 border-r-gray-300"}
