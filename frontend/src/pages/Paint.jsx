@@ -1,30 +1,65 @@
-import React, { useState, useEffect, useRef, useCallback } from "react"
+import React, { useState, useEffect, useRef, useCallback } from "react";
+import Menu from "src/components/Menu";
 
 export default function Paint() {
     const [width, setWidth] = useState(400);
     const [height, setHeight] = useState(400);
     const [coordinates, setCoordinates] = useState([0, 0]);
     const [palette, setPalette] = useState([]);
+    const [menu, setMenu] = useState("");
+    // const [menuOptions, setMenuOptions] = useState();
+
     const canvasRef = useRef();
     const docRef = useRef(document);
+    // Had to make this a ref, or it wouldn't update
+    const menuOpen = useRef(false);
 
     let canvasLeftDown = false;
     let canvasRightDown = false;
     let lastPoint = [0, 0];
     let currentPoint = [0, 0];
     let loopId;
+    let menuLabels = ["File", "Edit", "View", "Settings"];
 
+    function download(filename) {
+        url = canvasRef.current.toDataURL("image/png");
+        let a = docRef.current.createElement("a");
+        a.href = url;
+        a.download = filename;
+
+    }
+
+    function onMenuOpen(event) {
+        if (menu == event.target.id) {
+            setMenu("");
+            menuOpen.current = false;
+        }
+        else {
+            setMenu(event.target.id);
+            menuOpen.current = true;
+        }
+        // if (event.target.id == "File") {
+        // console.log("Clicked on File!");
+        // setMenuOptions([{ label: "Export", type: "anchor", url: canvasRef.current.toDataURL("image/png"), download: "Image" }]);
+        // setMenu("File");
+
+    }
     // Drawing in here rather than in mousemove event should be cheaper
     function drawingLoop(time) {
         // A drawing loop, called at 60 FPS or so
         if (canvasLeftDown) {
             const context = canvasRef.current.getContext("2d");
-            context.strokeStyle = "black";
-            context.lineWidth = 1;
-            context.moveTo(lastPoint[0], lastPoint[1]);
-            context.lineTo(currentPoint[0], currentPoint[1]);
-            context.closePath();
-            context.stroke();
+            // context.strokeStyle = "black";
+            // context.lineWidth = 1;
+            // context.moveTo(lastPoint[0], lastPoint[1]);
+            // context.lineTo(currentPoint[0], currentPoint[1]);
+            // context.closePath();
+            // context.stroke();
+            // I could draw a line but it's too smooth, try this instead 
+            context.fillStyle = "black";
+            context.fillRect(currentPoint[0], currentPoint[1], 1, 1);
+            // This kind of dot pencil isn't too bad
+            // Why not add a tool for it?
         }
         lastPoint = [...currentPoint];
         if (coordinates[0] != currentPoint[0] || coordinates[1] != currentPoint[1]) {
@@ -42,10 +77,19 @@ export default function Paint() {
         let x = Math.round(event.clientX - rect.left);
         let y = Math.round(event.clientY - rect.top);
         currentPoint = [x, y];
+
+        if (menuOpen.current && menu !== event.target.id && menuLabels.includes(event.target.id)) {
+            setMenu(event.target.id);
+        }
     }, []);
 
     const onDown = useCallback((event) => {
         // Called on mouse press
+        if (menuLabels.includes(event.target.id) == false) {
+            // Yeah, that works
+            setMenu("");
+            menuOpen.current = false;
+        }
         if (event.target.id === "canvas") {
             canvasLeftDown = true;
         }
@@ -82,7 +126,6 @@ export default function Paint() {
 
             colors.push({ index: i, color: code, style: { backgroundColor: code } });
         }
-        console.log(colors);
         setPalette(colors);
         loopId = requestAnimationFrame(drawingLoop);
 
@@ -97,11 +140,40 @@ export default function Paint() {
     return <div className="flex flex-col max-h-screen bg-gray-50">
         <div className="flex rounded-b-lg border-b border-b-gray-300">
             <nav>
-                <ul className="flex text-sm ml-3 my-1 gap-3">
-                    <li>File</li>
-                    <li>Edit</li>
-                    <li>View</li>
-                    <li>Settings</li>
+                <ul className="flex text-sm ml-3 mt-1 gap-3">
+                    <li className="relative p-1">
+                        <button
+                            id="File"
+                            onClick={onMenuOpen}
+                            className="hover:underline">
+                            File
+                        </button>
+                        {menu == "File" && <Menu></Menu>}
+                    </li>
+                    <li className="relative p-1">
+                        <button
+                            id="Edit"
+                            onClick={onMenuOpen}
+                            className="hover:underline relative">Edit
+                        </button>
+                        {menu == "Edit" && <Menu></Menu>}
+                    </li>
+                    <li className="relative p-1">
+                        <button
+                            id="View"
+                            onClick={onMenuOpen}
+                            className="hover:underline relative">View
+                        </button>
+                        {menu == "View" && <Menu></Menu>}
+                    </li>
+                    <li className="relative p-1">
+                        <button
+                            id="Settings"
+                            onClick={onMenuOpen}
+                            className="hover:underline relative">Settings
+                        </button>
+                        {menu == "Settings" && <Menu></Menu>}
+                    </li>
                 </ul>
             </nav>
         </div>
