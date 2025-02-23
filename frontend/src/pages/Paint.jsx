@@ -1,18 +1,21 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import Menu from "src/components/Menu";
+import ToolButton from "src/components/ToolButton";
 
 export default function Paint() {
-    const [width, setWidth] = useState(300);
-    const [height, setHeight] = useState(300);
+    const [canvasWidth, setCanvasWidth] = useState(300);
+    const [canvasHeight, setCanvasHeight] = useState(300);
     const [coordinates, setCoordinates] = useState([0, 0]);
     const [palette, setPalette] = useState([]);
     const [menu, setMenu] = useState("");
+    const [tool, setTool] = useState("");
 
     const canvasRef = useRef();
     const overlayRef = useRef();
     const docRef = useRef(document);
     // Had to make this a ref, or it wouldn't update
     const menuOpen = useRef(false);
+    const activeTool = useRef({ tool: "Fill ellipse", size: 1, color: "black", colorIndex: 0 });
 
     let canvasLeftDown = false;
     let canvasRightDown = false;
@@ -63,6 +66,9 @@ export default function Paint() {
         { label: "Save actions", type: "button", action: () => { } }
     ];
 
+    const drawingTools = ["Pencil", "Brush", "Dotter", "Bucket", "Eraser", "Dithering pencil", "Dithering bucket"];
+    const geometryTools = ["Line", "Rectangle", "Fill rectangle", "Ellipse", "Fill ellipse"];
+
 
     function downloadImage(event) {
         let url = canvasRef.current.toDataURL("image/png");
@@ -82,6 +88,11 @@ export default function Paint() {
             setMenu(event.target.id);
             menuOpen.current = true;
         }
+    }
+
+    function onToolSelect(event) {
+        setTool(event.target.id);
+        activeTool.current.tool = event.target.id;
     }
 
     // Drawing in here rather than in mousemove event should be cheaper
@@ -106,7 +117,7 @@ export default function Paint() {
 
             // This is a preview placed on top of the regular canvas
             const context = overlayRef.current.getContext("2d");
-            context.clearRect(0, 0, width, height);
+            context.clearRect(0, 0, canvasWidth, canvasHeight);
             // If you don't start a new path, clearRect fails
             context.beginPath();
 
@@ -210,6 +221,15 @@ export default function Paint() {
 
     const onRelease = useCallback((event) => {
         // Called on mouse release
+        if (canvasLeftDown) {
+            console.log()
+            if (geometryTools.includes(activeTool.current.tool)) {
+                let context = canvasRef.current.getContext("2d");
+                context.drawImage(overlayRef.current, 0, 0);
+            }
+        }
+        let overlayContect = overlayRef.current.getContext("2d");
+        overlayContect.clearRect(0, 0, canvasWidth, canvasHeight);
         canvasLeftDown = false;
     }, []);
 
@@ -218,7 +238,7 @@ export default function Paint() {
         // Paints the canvas white
         const context = canvasRef.current.getContext("2d");
         context.fillStyle = "white";
-        context.fillRect(0, 0, width, height);
+        context.fillRect(0, 0, canvasWidth, canvasHeight);
 
         docRef.current.addEventListener("mousemove", onMove);
         docRef.current.addEventListener("mousedown", onDown);
@@ -258,7 +278,7 @@ export default function Paint() {
                         <button
                             id="File"
                             onClick={onMenuOpen}
-                            className="hover:bg-gray-200 py-1 px-3">
+                            className="hover:bg-gray-200 pt-1 pb-2 px-3">
                             File
                         </button>
                         {menu == "File" && <Menu options={fileOptions}></Menu>}
@@ -267,7 +287,7 @@ export default function Paint() {
                         <button
                             id="Edit"
                             onClick={onMenuOpen}
-                            className="hover:bg-gray-200 py-1 px-3">Edit
+                            className="hover:bg-gray-200 pt-1 pb-2 px-3">Edit
                         </button>
                         {menu == "Edit" && <Menu options={editOptions}></Menu>}
                     </li>
@@ -275,7 +295,7 @@ export default function Paint() {
                         <button
                             id="View"
                             onClick={onMenuOpen}
-                            className="hover:bg-gray-200 py-1 px-3">View
+                            className="hover:bg-gray-200 pt-1 pb-2 px-3">View
                         </button>
                         {menu == "View" && <Menu options={viewOptions}></Menu>}
                     </li>
@@ -283,7 +303,7 @@ export default function Paint() {
                         <button
                             id="Settings"
                             onClick={onMenuOpen}
-                            className="hover:bg-gray-200 py-1 px-3">Settings
+                            className="hover:bg-gray-200 pt-1 pb-2 px-3">Settings
                         </button>
                         {menu == "Settings" && <Menu options={settingsOptions}></Menu>}
                     </li>
@@ -292,41 +312,47 @@ export default function Paint() {
         </div>
         <div className="flex flex-row border-b border-b-gray-300">
             <nav>
-                <ul className="flex flex-row text-xs p-1 gap-1 border border-gray-100">
-                    <li>Pencil</li>
-                    <li>Brush</li>
-                    <li>Fill</li>
-                    <li>Eraser</li>
+                <ul className="flex flex-row text-xs border-l border-r border-gray-300">
+                    <li><button className="py-1 px-2">Size</button></li>
                 </ul>
             </nav>
             <nav>
-                <ul className="flex flex-row text-xs p-1 gap-1 border-gray-100">
-                    <li>Line</li>
-                    <li>Rectangle</li>
-                    <li>Fill rectangle</li>
-                    <li>Circle</li>
-                    <li>Fill circle</li>
+                <ul className="flex flex-row text-xs border-l border-r border-gray-300">
+                    <ToolButton name="Pencil" icon={null} selectedTool={tool} onClick={onToolSelect}></ToolButton>
+                    <ToolButton name="Brush" icon={null} selectedTool={tool} onClick={onToolSelect}></ToolButton>
+                    <ToolButton name="Dotter" icon={null} selectedTool={tool} onClick={onToolSelect}></ToolButton>
+                    <ToolButton name="Bucket" icon={null} selectedTool={tool} onClick={onToolSelect}></ToolButton>
+                    <ToolButton name="Eraser" icon={null} selectedTool={tool} onClick={onToolSelect}></ToolButton>
                 </ul>
             </nav>
             <nav>
-                <ul className="flex flex-row text-xs p-1 gap-1 border border-gray-100">
-                    <li>Select</li>
-                    <li>Copy</li>
-                    <li>Cut</li>
-                    <li>Paste</li>
+                <ul className="flex flex-row text-xs border-l border-r border-gray-300">
+                    <ToolButton name="Line" icon={null} selectedTool={tool} onClick={onToolSelect}></ToolButton>
+                    <ToolButton name="Rectangle" icon={null} selectedTool={tool} onClick={onToolSelect}></ToolButton>
+                    <ToolButton name="Fill rectangle" icon={null} selectedTool={tool} onClick={onToolSelect}></ToolButton>
+                    <ToolButton name="Ellipse" icon={null} selectedTool={tool} onClick={onToolSelect}></ToolButton>
+                    <ToolButton name="Fill ellipse" icon={null} selectedTool={tool} onClick={onToolSelect}></ToolButton>
                 </ul>
             </nav>
             <nav>
-                <ul className="flex flex-row text-xs p-1 gap-1 border border-gray-100">
-                    <li>Dithering brush</li>
-                    <li>Dithering fill</li>
-                    <li>Dithering pattern</li>
+                <ul className="flex flex-row text-xs border-l border-r border-gray-300">
+                    <li><button className="py-1 px-2">Select</button></li>
+                    <li><button className="py-1 px-2">Copy</button></li>
+                    <li><button className="py-1 px-2">Cut</button></li>
+                    <li><button className="py-1 px-2">Paste</button></li>
                 </ul>
             </nav>
             <nav>
-                <ul className="flex flex-row text-xs p-1 gap-1 border border-gray-100">
-                    <li>Zoom</li>
-                    <li>Revert zoom</li>
+                <ul className="flex flex-row text-xs border-l border-r border-gray-300">
+                    <ToolButton name="Dithering pencil" icon={null} selectedTool={tool} onClick={onToolSelect}></ToolButton>
+                    <ToolButton name="Dithering bucket" icon={null} selectedTool={tool} onClick={onToolSelect}></ToolButton>
+                    <li><button className="py-1 px-2">Dithering pattern</button></li>
+                </ul>
+            </nav>
+            <nav>
+                <ul className="flex flex-row text-xs border-l border-r border-gray-300">
+                    <li><button className="py-1 px-2">Zoom</button></li>
+                    <li><button className="py-1 px-2">Restore zoom</button></li>
                 </ul>
             </nav>
         </div>
@@ -339,22 +365,22 @@ export default function Paint() {
                     <canvas
                         id="canvas"
                         ref={canvasRef}
-                        width={width}
-                        height={height}
+                        width={canvasWidth}
+                        height={canvasHeight}
                         className="absolute top-0 left-0 w-[300px] h-[300px] z-0">
                     </canvas>
                     <canvas
                         id="overlay"
                         ref={overlayRef}
-                        width={width}
-                        height={height}
+                        width={canvasWidth}
+                        height={canvasHeight}
                         className="absolute top-0 left-0 w-[300px] h-[300px] z-10">
                     </canvas>
                 </div>
 
                 <div className="bg-gray-300 w-[360px] min-h-[60px]"></div>
             </div>
-            <div className="flex flex-col">
+            <div className="flex flex-col border-l border-l-gray-300">
                 <div className="grid grid-cols-16 gap-0 p-1 m-1 bg-gray-100 border border-gray-300">
                     {palette.map((color) => <div
                         key={color.index}
