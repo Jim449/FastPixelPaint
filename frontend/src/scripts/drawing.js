@@ -10,7 +10,7 @@ class ImageLayer {
         this.height = height;
         this.order = order;
         this.visible = true;
-        this.indexedData = [];
+        this.indexedColors = [];
         this.colorSet = [];
     }
 }
@@ -21,6 +21,8 @@ class Drawing {
         this.width = width;
         this.height = height;
         this.layers = [];
+        this.history = [];
+        this.historyIndex = 0;
         this.image = null;
         this.activeLayer = null;
         this.preview = null;
@@ -80,7 +82,7 @@ class Drawing {
         let imageData = context.getImageData(0, 0, this.width, this.height);
 
         shape.foreach((coordinates) => {
-            let dataIndex = (coordinates[1] * this.width + coordinates[0]) * 4;
+            let dataIndex = (coordinates.y * this.width + coordinates.x) * 4;
 
             imageData[dataIndex] = activeTool.red;
             imageData[dataIndex + 1] = activeTool.green;
@@ -92,7 +94,7 @@ class Drawing {
     commitGeometry(context, activeTool, shape) {
         // I have a preview drawing and a shape
         // Take the shape and draw to the active layer
-        // I need to draw the indexedData so that I can save to the database
+        // I need to draw the indexedColors so that I can save to the database
         // or manipulate colors through the palette
         // The active layer shouldn't be a visible canvas
         // Rather, it should be an offscreen canvas
@@ -100,22 +102,40 @@ class Drawing {
         // Draw the shape onto the image layer
         // The image layer is an actual canvas
         // I can draw with drawImage, using the active layer as the image 
-        // I won't have to draw the indexedData
+        // I won't have to draw the indexedColors
         // Draw the layer above the active layer onto the image layer
         // Repeat until I reach the top layer
 
         let imageData = context.getImageData(0, 0, this.width, this.height);
 
         shape.foreach((coordinates) => {
-            let drawingIndex = coordinates[1] * this.width + coordinates[0];
+            let drawingIndex = coordinates.y * this.width + coordinates.x;
             let dataIndex = drawingIndex * 4;
 
-            this.activeLayer.indexedData[drawingIndex] = activeTool.colorIndex;
+            coordinates.lastColor = this.activeLayer.indexedColors[drawingIndex];
+
+            this.activeLayer.indexedColors[drawingIndex] = activeTool.colorIndex;
+
+            coordinates.lastRed = imageData[dataIndex];
+            coordinates.lastGreen = imageData[dataIndex + 1];
+            coordinates.lastBlue = imageData[dataIndex + 2];
+            coordinates.lastAlpha = imageData[dataIndex + 3];
 
             imageData[dataIndex] = activeTool.red;
             imageData[dataIndex + 1] = activeTool.green;
             imageData[dataIndex + 2] = activeTool.blue;
             imageData[dataIndex + 3] = 255;
         });
+        if (this.historyIndex === 20) {
+            this.history.shift();
+        }
+        else if (this.history.length > this.historyIndex) {
+            this.history.splice(this.history.length);
+            this.historyIndex += 1;
+        }
+        else {
+            this.historyIndex += 1;
+        }
+        this.history.push(shape);
     }
 }

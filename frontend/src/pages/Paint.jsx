@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import Menu from "src/components/Menu";
 import ToolButton from "src/components/ToolButton";
+import PaletteButton from "../components/PaletteButton";
 
 export default function Paint() {
     const [canvasWidth, setCanvasWidth] = useState(300);
@@ -9,13 +10,15 @@ export default function Paint() {
     const [palette, setPalette] = useState([]);
     const [menu, setMenu] = useState("");
     const [tool, setTool] = useState("");
+    const [primaryColor, setPrimaryColor] = useState({ color: "black", index: -1 });
+    const [secondaryColor, setSecondaryColor] = useState({ color: "white", index: -1 });
 
     const canvasRef = useRef();
     const overlayRef = useRef();
     const docRef = useRef(document);
     // Had to make this a ref, or it wouldn't update
     const menuOpen = useRef(false);
-    const activeTool = useRef({ tool: "Fill ellipse", size: 1, color: "black", red: 0, blue: 0, green: 0, colorIndex: 0 });
+    const activeTool = useRef({ tool: "", size: 1, color: "black", red: 0, blue: 0, green: 0, colorIndex: 0 });
 
     let canvasLeftDown = false;
     let canvasRightDown = false;
@@ -95,6 +98,22 @@ export default function Paint() {
         activeTool.current.tool = event.target.id;
     }
 
+    function onPaletteClick(event, index, color) {
+        setPrimaryColor({ color: color, index: index });
+        activeTool.current.color = color;
+        activeTool.current.colorIndex = index;
+    }
+
+    function colorToHex(value) {
+        let result = value.toString(16);
+        if (result.length == 1) {
+            return "0" + result;
+        }
+        else {
+            return result;
+        }
+    }
+
     function getStart(x1, x2) {
         return Math.min(x1, x2);
     }
@@ -112,8 +131,10 @@ export default function Paint() {
 
             if (drawingTools.includes(tool.tool)) {
                 const context = canvasRef.current.getContext("2d");
+                context.beginPath();
 
                 if (tool.tool === "Pencil") {
+                    // Does the color work in this format?
                     context.strokeStyle = tool.color;
                     context.lineWidth = tool.size;
                     context.moveTo(lastPoint[0], lastPoint[1]);
@@ -233,20 +254,16 @@ export default function Paint() {
         docRef.current.addEventListener("mousedown", onDown);
         docRef.current.addEventListener("mouseup", onRelease);
 
-        // Replace later. For now, I'm going to display some fancy gradient
+        // Replace later. Random colors are nicer than a red gradient, aren't they?
         let colors = [];
 
-        for (let i = 0; i < 16 * 16; i++) {
-            let code = i.toString(16) + "0000"
+        for (let i = 0; i < 256; i++) {
+            let red = colorToHex(Math.floor(Math.random() * 256));
+            let green = colorToHex(Math.floor(Math.random() * 256));
+            let blue = colorToHex(Math.floor(Math.random() * 256));
+            let code = "#" + red + green + blue;
 
-            if (code.length == 5) {
-                code = "#0" + code;
-            }
-            else {
-                code = "#" + code;
-            }
-
-            colors.push({ index: i, color: code, style: { backgroundColor: code } });
+            colors.push({ index: i, color: code, style: { background: code } });
         }
         setPalette(colors);
         loopId = requestAnimationFrame(drawingLoop);
@@ -371,13 +388,21 @@ export default function Paint() {
             </div>
             <div className="flex flex-col border-l border-l-gray-300">
                 <div className="grid grid-cols-16 gap-0 p-1 m-1 bg-gray-100 border border-gray-300">
-                    {palette.map((color) => <div
-                        key={color.index}
-                        className={"size-3 border border-t-gray-800 border-l-gray-800 border-b-gray-300 border-r-gray-300"}
-                        style={{ background: color.color }}></div>)}
+                    {palette.map((color) =>
+                        <PaletteButton
+                            key={color.index}
+                            index={color.index}
+                            color={color.color}
+                            action={onPaletteClick}>
+                        </PaletteButton>)}
                 </div>
-                <div className="flex">
-                    Active colors
+                <div className="flex gap-2 m-2">
+                    <div
+                        className="size-6 border-2 border-t-gray-800 border-l-gray-800 border-b-gray-300 border-r-gray-300"
+                        style={{ background: primaryColor.color }}></div>
+                    <div
+                        className="size-6 border-2 border-t-gray-800 border-l-gray-800 border-b-gray-300 border-r-gray-300"
+                        style={{ background: secondaryColor.color }}></div>
                 </div>
                 <div className="flex flex-col">
                     Layers

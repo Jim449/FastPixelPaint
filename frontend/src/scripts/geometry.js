@@ -3,7 +3,7 @@ export function getHorizontalLine(x1, y1, dx) {
     let coordinates = [];
 
     for (x = x1; x <= x1 + dx; x++) {
-        coordinates.push([x, y1]);
+        coordinates.push({ x: x, y: y1 });
     }
     return coordinates;
 }
@@ -14,7 +14,7 @@ export function getVerticalLine(x1, y1, dy) {
     let coordinates = [];
 
     for (y = y1; y <= y1 + dy; y++) {
-        coordinates.push([x1, y]);
+        coordinates.push({ x: x1, y: y });
     }
     return coordinates;
 }
@@ -27,10 +27,10 @@ function getXLine(x1, y1, dx, slope) {
         return getHorizontalLine(x1, y1, dx);
     }
     let fraction = slope / dx;
-    let coordinates = [[x1, y1]];
+    let coordinates = [{ x: x1, y: y1 }];
 
     for (let step = 1; step <= dx; step++) {
-        coordinates.push([x + step, Math.round(y1 + step * fraction)]);
+        coordinates.push({ x: x + step, y: Math.round(y1 + step * fraction) });
     }
     return coordinates;
 }
@@ -42,10 +42,10 @@ function getYLine(x1, y1, dy, slope) {
         return getVerticalLine(x1, y1, dy);
     }
     let fraction = slope / dy;
-    let coordinates = [[x1, y1]];
+    let coordinates = [{ x: x1, y: y1 }];
 
     for (let step = 1; step <= dy; step++) {
-        coordinates.push([Math.round(x1 + step * fraction), y + step]);
+        coordinates.push({ x: Math.round(x1 + step * fraction), y: y + step });
     }
     return coordinates;
 }
