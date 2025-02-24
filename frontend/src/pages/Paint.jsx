@@ -15,7 +15,7 @@ export default function Paint() {
     const docRef = useRef(document);
     // Had to make this a ref, or it wouldn't update
     const menuOpen = useRef(false);
-    const activeTool = useRef({ tool: "Fill ellipse", size: 1, color: "black", colorIndex: 0 });
+    const activeTool = useRef({ tool: "Fill ellipse", size: 1, color: "black", red: 0, blue: 0, green: 0, colorIndex: 0 });
 
     let canvasLeftDown = false;
     let canvasRightDown = false;
@@ -95,89 +95,78 @@ export default function Paint() {
         activeTool.current.tool = event.target.id;
     }
 
+    function getStart(x1, x2) {
+        return Math.min(x1, x2);
+    }
+
+    function getLength(x1, x2) {
+        return Math.abs(x2 - x1);
+    }
+
+
     // Drawing in here rather than in mousemove event should be cheaper
     function drawingLoop(time) {
         // A drawing loop, called at 60 FPS or so
         if (canvasLeftDown) {
-            // const context = canvasRef.current.getContext("2d");
+            let tool = activeTool.current;
 
-            // Draws multiple lines to make for a "pencil"
-            // context.strokeStyle = "black";
-            // context.lineWidth = 1;
-            // context.moveTo(lastPoint[0], lastPoint[1]);
-            // context.lineTo(currentPoint[0], currentPoint[1]);
-            // context.closePath();
-            // context.stroke();
-            // This is all well and good but it's smooth
-            // It isn't what I'd call pixel art
+            if (drawingTools.includes(tool.tool)) {
+                const context = canvasRef.current.getContext("2d");
 
-            // Draws small rectangles to make for a "dot tool"
-            // context.fillStyle = "black";
-            // context.fillRect(currentPoint[0], currentPoint[1], 1, 1);
-
-            // This is a preview placed on top of the regular canvas
-            const context = overlayRef.current.getContext("2d");
-            context.clearRect(0, 0, canvasWidth, canvasHeight);
-            // If you don't start a new path, clearRect fails
-            context.beginPath();
-
-            // Draws a line
-            // context.strokeStyle = "black";
-            // context.lineWidth = 1;
-            // context.moveTo(startPoint[0], startPoint[1]);
-            // context.lineTo(currentPoint[0], currentPoint[1]);
-            // context.closePath();
-            // context.stroke();
-
-            let startX;
-            let startY;
-            let dx;
-            let dy;
-
-            // Move this to a function. Use the geometry module
-            if (currentPoint[0] > startPoint[0]) {
-                startX = startPoint[0];
-                dx = currentPoint[0] - startPoint[0];
+                if (tool.tool === "Pencil") {
+                    context.strokeStyle = tool.color;
+                    context.lineWidth = tool.size;
+                    context.moveTo(lastPoint[0], lastPoint[1]);
+                    context.lineTo(currentPoint[0], currentPoint[1]);
+                    context.closePath();
+                    context.stroke();
+                    // This is all well and good but it's smooth
+                    // It isn't what I'd call pixel art
+                }
+                else if (tool.tool === "Dotter") {
+                    context.fillStyle = tool.color;
+                    context.fillRect(currentPoint[0], currentPoint[1], tool.size, tool.size);
+                }
             }
-            else {
-                startX = currentPoint[0];
-                dx = startPoint[0] - currentPoint[0];
+            else if (geometryTools.includes(tool.tool)) {
+                const context = overlayRef.current.getContext("2d");
+                let startX = getStart(startPoint[0], currentPoint[0]);
+                let startY = getStart(startPoint[1], currentPoint[1]);
+                let dx = getLength(startPoint[0], currentPoint[0]);
+                let dy = getLength(startPoint[1], currentPoint[1]);
+
+                context.clearRect(0, 0, canvasWidth, canvasHeight);
+                context.beginPath();
+
+                if (tool.tool === "Line") {
+                    context.strokeStyle = tool.color;
+                    context.lineWidth = tool.size;
+                    context.moveTo(startPoint[0], startPoint[1]);
+                    context.lineTo(currentPoint[0], currentPoint[1]);
+                    context.closePath();
+                    context.stroke();
+                }
+                else if (tool.tool === "Rectangle") {
+                    context.strokeStyle = tool.color;
+                    context.lineWidth = tool.size;
+                    context.strokeRect(startX + 0.5, startY + 0.5, dx, dy);
+                }
+                else if (tool.tool === "Fill rectangle") {
+                    context.fillStyle = tool.color;
+                    context.fillRect(startX, startY, dx, dy);
+                }
+                else if (tool.tool === "Ellipse") {
+                    context.strokeStyle = tool.color;
+                    context.lineWidth = tool.size;
+                    context.ellipse((startPoint[0] + currentPoint[0]) / 2, (startPoint[1] + currentPoint[1]) / 2, dx / 2, dy / 2, 0, 0, Math.PI * 2);
+                    context.stroke();
+                }
+                else if (tool.tool === "Fill ellipse") {
+                    context.fillStyle = tool.color;
+                    context.ellipse((startPoint[0] + currentPoint[0]) / 2, (startPoint[1] + currentPoint[1]) / 2, dx / 2, dy / 2, 0, 0, Math.PI * 2);
+                    context.fill();
+                }
             }
-
-            if (currentPoint[1] > startPoint[1]) {
-                startY = startPoint[1];
-                dy = currentPoint[1] - startPoint[1];
-            }
-            else {
-                startY = currentPoint[1];
-                dy = startPoint[1] - currentPoint[1];
-            }
-
-            // Draws a rectangle outline
-            // context.strokeStyle = "black";
-            // context.lineWidth = 1;
-            // context.strokeRect(startX + 0.5, startY + 0.5, dx, dy);
-            // Nice! Doesn't look too black, though. Just gray
-            // It looks good if I offset to x+0.5 and y+0.5
-
-            // Draws a solid rectangle
-            // context.fillStyle = "black";
-            // context.lineWidth = 1;
-            // context.fillRect(startX, startY, dx, dy);
-            // Very nice!
-
-            // Draws an ellipse outline
-            // context.strokeStyle = "black";
-            // context.lineWidth = 1;
-            // context.ellipse((startPoint[0] + currentPoint[0]) / 2, (startPoint[1] + currentPoint[1]) / 2, dx / 2, dy / 2, 0, 0, Math.PI * 2);
-            // context.stroke();
-            // Nice! Not really pixelart so I need another approach
-
-            // Draws a solid ellipse
-            context.fillStyle = "black";
-            context.ellipse((startPoint[0] + currentPoint[0]) / 2, (startPoint[1] + currentPoint[1]) / 2, dx / 2, dy / 2, 0, 0, Math.PI * 2);
-            context.fill();
-            // Nice!
         }
         lastPoint = [...currentPoint];
         if (coordinates[0] != currentPoint[0] || coordinates[1] != currentPoint[1]) {
