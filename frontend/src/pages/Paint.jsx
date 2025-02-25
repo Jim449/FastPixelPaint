@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import Menu from "src/components/Menu";
 import ToolButton from "src/components/ToolButton";
-import PaletteButton from "../components/PaletteButton";
+import PaletteButton from "src/components/PaletteButton";
+import { standardPalette } from "src/scripts/user_setup";
 
 export default function Paint() {
     const [canvasWidth, setCanvasWidth] = useState(300);
@@ -18,7 +19,7 @@ export default function Paint() {
     const docRef = useRef(document);
     // Had to make this a ref, or it wouldn't update
     const menuOpen = useRef(false);
-    const activeTool = useRef({ tool: "", size: 1, color: "black", red: 0, blue: 0, green: 0, colorIndex: 0 });
+    const activeTool = useRef({ tool: "", size: 1, color: "black", eraser: "white", red: 0, blue: 0, green: 0, colorIndex: 0 });
 
     let canvasLeftDown = false;
     let canvasRightDown = false;
@@ -104,6 +105,11 @@ export default function Paint() {
         activeTool.current.colorIndex = index;
     }
 
+    function onPaletteRightClick(event, index, color) {
+        setSecondaryColor({ color: color, index: index });
+        activeTool.current.eraser = color;
+    }
+
     function colorToHex(value) {
         let result = value.toString(16);
         if (result.length == 1) {
@@ -126,16 +132,23 @@ export default function Paint() {
     // Drawing in here rather than in mousemove event should be cheaper
     function drawingLoop(time) {
         // A drawing loop, called at 60 FPS or so
-        if (canvasLeftDown) {
+        if (canvasLeftDown || canvasRightDown) {
             let tool = activeTool.current;
 
             if (drawingTools.includes(tool.tool)) {
                 const context = canvasRef.current.getContext("2d");
                 context.beginPath();
 
-                if (tool.tool === "Pencil") {
-                    // Does the color work in this format?
+                if (canvasLeftDown) {
                     context.strokeStyle = tool.color;
+                    context.fillStyle = tool.color;
+                }
+                else {
+                    context.strokeStyle = tool.eraser;
+                    context.fillStyle = tool.eraser;
+                }
+
+                if (tool.tool === "Pencil") {
                     context.lineWidth = tool.size;
                     context.moveTo(lastPoint[0], lastPoint[1]);
                     context.lineTo(currentPoint[0], currentPoint[1]);
@@ -145,7 +158,6 @@ export default function Paint() {
                     // It isn't what I'd call pixel art
                 }
                 else if (tool.tool === "Dotter") {
-                    context.fillStyle = tool.color;
                     context.fillRect(currentPoint[0], currentPoint[1], tool.size, tool.size);
                 }
             }
@@ -156,11 +168,19 @@ export default function Paint() {
                 let dx = getLength(startPoint[0], currentPoint[0]);
                 let dy = getLength(startPoint[1], currentPoint[1]);
 
+                if (canvasLeftDown) {
+                    context.strokeStyle = tool.color;
+                    context.fillStyle = tool.color;
+                }
+                else {
+                    context.strokeStyle = tool.eraser;
+                    context.fillStyle = tool.eraser;
+                }
+
                 context.clearRect(0, 0, canvasWidth, canvasHeight);
                 context.beginPath();
 
                 if (tool.tool === "Line") {
-                    context.strokeStyle = tool.color;
                     context.lineWidth = tool.size;
                     context.moveTo(startPoint[0], startPoint[1]);
                     context.lineTo(currentPoint[0], currentPoint[1]);
@@ -168,22 +188,18 @@ export default function Paint() {
                     context.stroke();
                 }
                 else if (tool.tool === "Rectangle") {
-                    context.strokeStyle = tool.color;
                     context.lineWidth = tool.size;
                     context.strokeRect(startX + 0.5, startY + 0.5, dx, dy);
                 }
                 else if (tool.tool === "Fill rectangle") {
-                    context.fillStyle = tool.color;
                     context.fillRect(startX, startY, dx, dy);
                 }
                 else if (tool.tool === "Ellipse") {
-                    context.strokeStyle = tool.color;
                     context.lineWidth = tool.size;
                     context.ellipse((startPoint[0] + currentPoint[0]) / 2, (startPoint[1] + currentPoint[1]) / 2, dx / 2, dy / 2, 0, 0, Math.PI * 2);
                     context.stroke();
                 }
                 else if (tool.tool === "Fill ellipse") {
-                    context.fillStyle = tool.color;
                     context.ellipse((startPoint[0] + currentPoint[0]) / 2, (startPoint[1] + currentPoint[1]) / 2, dx / 2, dy / 2, 0, 0, Math.PI * 2);
                     context.fill();
                 }
@@ -224,15 +240,20 @@ export default function Paint() {
             let rect = canvasRef.current.getBoundingClientRect();
             let x = Math.round(event.clientX - rect.left);
             let y = Math.round(event.clientY - rect.top);
-            canvasLeftDown = true;
+
+            if (event.button === 0) {
+                canvasLeftDown = true;
+            }
+            else if (event.button === 2) {
+                canvasRightDown = true;
+            }
             startPoint = [x, y];
         }
     }, []);
 
     const onRelease = useCallback((event) => {
         // Called on mouse release
-        if (canvasLeftDown) {
-            console.log()
+        if (canvasLeftDown || canvasRightDown) {
             if (geometryTools.includes(activeTool.current.tool)) {
                 let context = canvasRef.current.getContext("2d");
                 context.drawImage(overlayRef.current, 0, 0);
@@ -241,7 +262,9 @@ export default function Paint() {
         let overlayContect = overlayRef.current.getContext("2d");
         overlayContect.clearRect(0, 0, canvasWidth, canvasHeight);
         canvasLeftDown = false;
+        canvasRightDown = false;
     }, []);
+
 
     useEffect(() => {
         // Sets up mouse listeners and main loop
@@ -254,18 +277,8 @@ export default function Paint() {
         docRef.current.addEventListener("mousedown", onDown);
         docRef.current.addEventListener("mouseup", onRelease);
 
-        // Replace later. Random colors are nicer than a red gradient, aren't they?
-        let colors = [];
-
-        for (let i = 0; i < 256; i++) {
-            let red = colorToHex(Math.floor(Math.random() * 256));
-            let green = colorToHex(Math.floor(Math.random() * 256));
-            let blue = colorToHex(Math.floor(Math.random() * 256));
-            let code = "#" + red + green + blue;
-
-            colors.push({ index: i, color: code, style: { background: code } });
-        }
-        setPalette(colors);
+        window.oncontextmenu = (event) => { event.preventDefault() }
+        setPalette(standardPalette());
         loopId = requestAnimationFrame(drawingLoop);
 
         return () => {
@@ -393,7 +406,8 @@ export default function Paint() {
                             key={color.index}
                             index={color.index}
                             color={color.color}
-                            action={onPaletteClick}>
+                            action={onPaletteClick}
+                            rightClick={onPaletteRightClick}>
                         </PaletteButton>)}
                 </div>
                 <div className="flex gap-2 m-2">
