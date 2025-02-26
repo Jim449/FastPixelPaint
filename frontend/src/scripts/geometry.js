@@ -108,60 +108,81 @@ export function getStraightLine(x1, y1, x2, y2) {
 
 export function getCircle(x1, y1, x2, y2) {
     // Draws a circle. The coordinates must form a square
-    let minX = Math.min(x1, x2);
-    let maxX = Math.max(x1, x2);
-    let minY = Math.min(y1, y2);
-    let maxY = Math.max(y1, y2);
-    let radius = (maxX - minX) / 2;
+    let radius = (Math.max(x1, x2) - Math.min(x1, x2)) / 2;
+    let centerX = Math.min(x1, x2) + radius;
+    let centerY = Math.min(y1, y2) + radius;
     let coordinates = [];
 
-    let xDiff = 0;
+    // Adding 0.5 where radius is odd should eliminate rounding inconsistencies
+    // and allow for more accurate calculation of x
+    let startY = (y1 + y2) % 2 === 0 ? 0 : 0.5;
+    let x = 0;
     let yQuota;
 
     // This will compute the pixels on 1/8 of a circle
     // The result is copied and applied to create a full circle
     // Each step of the loop represents one y-coordinate
     // That should minimize the amount of steps needed
-    // No, this isn't working yet
-    // But try and implement a paint function so I can see the results on screen
-    for (let yDiff = 0; yDiff <= Math.ceil(radius * Math.SQRT1_2); yDiff++) {
-        yQuota = yDiff / Math.ceil(radius);
-        xDiff = Math.round(Math.cos(Math.asin(yQuota)) * radius);
+    for (let y = startY; y <= Math.ceil(radius * Math.SQRT1_2); y++) {
+        yQuota = y / radius;
+        x = Math.cos(Math.asin(yQuota)) * radius;
 
-        // Circle quadrant 1/8 and 8/8
-        coordinates.push({ x: maxX - xDiff, y: minY + Math.ceil(radius) + yDiff });
-        coordinates.push({ x: maxX - xDiff, y: minY + Math.floor(radius) - yDiff });
-        // Circle quadrant 4/8 and 5/8
-        coordinates.push({ x: minY + xDiff, y: minY + Math.ceil(radius) + yDiff });
-        coordinates.push({ x: minY + xDiff, y: minY + Math.floor(radius) - yDiff });
-        // Circle quadrant 2/8 and 3/8
-        coordinates.push({ x: minX + Math.ceil(radius) + yDiff, y: minY + xDiff });
-        coordinates.push({ x: minX + Math.floor(radius) - yDiff, y: minY + xDiff });
-        // Circle quadrant 6/8 and 7/8
-        coordinates.push({ x: minX + Math.ceil(radius) + yDiff, y: maxY - xDiff });
-        coordinates.push({ x: minX + Math.floor(radius) - yDiff, y: maxY - xDiff });
+        coordinates.push({ x: Math.round(centerX + x), y: Math.round(centerY + y) });
+        coordinates.push({ x: Math.round(centerX + x), y: Math.round(centerY - y) });
+        coordinates.push({ x: Math.round(centerX - x), y: Math.round(centerY + y) });
+        coordinates.push({ x: Math.round(centerX - x), y: Math.round(centerY - y) });
+        coordinates.push({ x: Math.round(centerX + y), y: Math.round(centerY + x) });
+        coordinates.push({ x: Math.round(centerX - y), y: Math.round(centerY + x) });
+        coordinates.push({ x: Math.round(centerX + y), y: Math.round(centerY - x) });
+        coordinates.push({ x: Math.round(centerX - y), y: Math.round(centerY - x) });
     }
     return coordinates;
 }
 
 export function getEllipse(x1, y1, x2, y2) {
     // Draws an ellipse
-    let minX = Math.min(x1, x2);
-    let maxX = Math.max(x1, x2);
-    let minY = Math.min(y1, y2);
-    let maxY = Math.max(y1, y2);
-    let radiusX = (maxX - minX) / 2;
-    let radiusY = (maxY - minY) / 2;
+    let radiusX = (Math.max(x1, x2) - Math.min(x1, x2)) / 2;
+    let radiusY = (Math.max(y1, y2) - Math.min(y1, y2)) / 2;
 
-    // The algorithm used for circle will not work too well here
-    // I will have to calculate 1/4 of the ellipse
-    // If I increase y by 1 per step, gaps may appear on x-axis at any point
-    // But in that case, I could switch to the other direction,
-    // and increase x by 1 per step without getting gaps on the y-axis
+    if (radiusX === radiusY) {
+        return getCircle(x1, y1, x2, y2);
+    }
 
-    // Alternatively, I could calculate a circle
-    // on the minimum distance x2-x1, y2-y1
-    // Then I could stretch that circle
-    // But if I do that, I will want to use float values until the end
-    // So I still need to do all the calculations here
+    let centerX = Math.min(x1, x2) + radiusX;
+    let centerY = Math.min(y1, y2) + radiusY;
+    let coordinates = [];
+
+    // Adding 0.5 where radius is odd should eliminate rounding inconsistencies
+    // and allow for more accurate calculation of x
+    let startY = (y1 + y2) % 2 === 0 ? 0 : 0.5;
+    let startX = (x1 + x2) % 2 === 0 ? 0 : 0.5;
+    let x = 0;
+    let y = 0;
+    let xQuota;
+    let yQuota;
+
+    // Computes the whole circle by deducing x values from y
+    // It may leave some gaps on the x-axis
+    // Therefore, it will be necessary to deduce y values from x as well 
+    for (let yStep = startY; yStep <= radiusY; yStep++) {
+        yQuota = yStep / radiusY;
+        x = Math.cos(Math.asin(yQuota)) * radiusX;
+
+        coordinates.push({ x: Math.round(centerX + x), y: Math.round(centerY + yStep) });
+        coordinates.push({ x: Math.round(centerX + x), y: Math.round(centerY - yStep) });
+        coordinates.push({ x: Math.round(centerX - x), y: Math.round(centerY + yStep) });
+        coordinates.push({ x: Math.round(centerX - x), y: Math.round(centerY - yStep) });
+    }
+
+    for (let xStep = startX; xStep <= radiusX; xStep++) {
+        xQuota = xStep / radiusX;
+        y = Math.sin(Math.acos(xQuota)) * radiusY;
+
+        coordinates.push({ x: Math.round(centerX + xStep), y: Math.round(centerY + y) });
+        coordinates.push({ x: Math.round(centerX + xStep), y: Math.round(centerY - y) });
+        coordinates.push({ x: Math.round(centerX - xStep), y: Math.round(centerY + y) });
+        coordinates.push({ x: Math.round(centerX - xStep), y: Math.round(centerY - y) });
+    }
+
+    return coordinates;
 }

@@ -3,7 +3,7 @@ import Menu from "src/components/Menu";
 import ToolButton from "src/components/ToolButton";
 import PaletteButton from "src/components/PaletteButton";
 import { standardPalette } from "src/scripts/user_setup";
-import { getCircle } from "src/scripts/geometry";
+import { getCircle, getEllipse } from "src/scripts/geometry";
 
 export default function Paint() {
     const [canvasWidth, setCanvasWidth] = useState(300);
@@ -12,15 +12,15 @@ export default function Paint() {
     const [palette, setPalette] = useState([]);
     const [menu, setMenu] = useState("");
     const [tool, setTool] = useState("");
-    const [primaryColor, setPrimaryColor] = useState({ color: "black", index: -1 });
-    const [secondaryColor, setSecondaryColor] = useState({ color: "white", index: -1 });
+    const [primaryColor, setPrimaryColor] = useState({ color: "#000000", index: -1 });
+    const [secondaryColor, setSecondaryColor] = useState({ color: "#ffffff", index: -1 });
 
     const canvasRef = useRef();
     const overlayRef = useRef();
     const docRef = useRef(document);
     // Had to make this a ref, or it wouldn't update
     const menuOpen = useRef(false);
-    const activeTool = useRef({ tool: "", size: 1, color: "black", eraser: "white", red: 0, blue: 0, green: 0, colorIndex: 0 });
+    const activeTool = useRef({ tool: "", size: 1, color: "#000000", eraser: "#ffffff", red: 0, blue: 0, green: 0, colorIndex: 0 });
 
     let canvasLeftDown = false;
     let canvasRightDown = false;
@@ -121,12 +121,25 @@ export default function Paint() {
         }
     }
 
+
+    function hexToColor(code, colorType) {
+        // Converts a color code to a color value
+        // Specify colorType out of 0: red, 1: green or 2: blue
+        let hex = code.substring(1 + 2 * colorType, 3 + 2 * colorType);
+        console.log(hex, parseInt(hex, 16));
+        return parseInt(hex, 16);
+    }
+
     function getStart(x1, x2) {
+        // Use on x, y to get the upper left corner
         return Math.min(x1, x2);
     }
 
     function getLength(x1, x2) {
-        return Math.abs(x2 - x1);
+        // Returns the distance between two coordinates
+        // If x1 == x2, returns 1 since the pixel at x1
+        // should still be painted
+        return Math.abs(x2 - x1) + 1;
     }
 
 
@@ -201,22 +214,17 @@ export default function Paint() {
                     // context.stroke();
 
                     // Try drawing some circles using my geometry module
-                    let pixels = context.createImageData(50, 50);
-                    let circle = getCircle(0, 0, 50, 50);
+                    // Nice! Try an ellipse now
+                    let pixels = context.createImageData(dx, dy);
+                    let circle = getEllipse(0, 0, dx - 1, dy - 1);
                     circle.forEach(element => {
-                        let index = (element.y * 50 + element.x) * 4;
-                        pixels.data[index] = 0;
-                        pixels.data[index + 1] = 0;
-                        pixels.data[index + 2] = 0;
+                        let index = (element.y * dx + element.x) * 4;
+                        pixels.data[index] = tool.red;
+                        pixels.data[index + 1] = tool.green;
+                        pixels.data[index + 2] = tool.blue;
                         pixels.data[index + 3] = 255;
                     });
-                    console.log(circle);
-                    console.log(pixels.data);
-                    context.putImageData(pixels, currentPoint[0], currentPoint[1]);
-                    // I see I've messed up the circle
-                    // It looks like a snowflake
-                    // At least there's some round shapes
-                    // If I tweak it a bit it should turn out alright
+                    context.putImageData(pixels, startX, startY);
                 }
                 else if (tool.tool === "Fill ellipse") {
                     context.ellipse((startPoint[0] + currentPoint[0]) / 2, (startPoint[1] + currentPoint[1]) / 2, dx / 2, dy / 2, 0, 0, Math.PI * 2);
@@ -262,9 +270,15 @@ export default function Paint() {
 
             if (event.button === 0) {
                 canvasLeftDown = true;
+                activeTool.current.red = hexToColor(activeTool.current.color, 0);
+                activeTool.current.green = hexToColor(activeTool.current.color, 1);
+                activeTool.current.blue = hexToColor(activeTool.current.color, 2);
             }
             else if (event.button === 2) {
                 canvasRightDown = true;
+                activeTool.current.red = hexToColor(activeTool.current.eraser, 0);
+                activeTool.current.green = hexToColor(activeTool.current.eraser, 1);
+                activeTool.current.blue = hexToColor(activeTool.current.eraser, 2);
             }
             startPoint = [x, y];
         }
