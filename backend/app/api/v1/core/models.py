@@ -10,13 +10,24 @@ class Base(DeclarativeBase):
         Integer, primary_key=True, autoincrement=True)
 
 
+class Token(Base):
+    __tablename__ = "tokens"
+    created: Mapped[datetime] = mapped_column(
+        DateTime, default=lambda: datetime.now())
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
+
+    user: Mapped["User"] = relationship(back_populates="tokens")
+
+
 class User(Base):
     __tablename__ = "users"
     email: Mapped[str] = mapped_column(String, unique=True)
+    password_hash: Mapped[str] = mapped_column(String(255))
     root_folder_id: Mapped[int] = mapped_column(ForeignKey("folders.id"))
     default_palette_id: Mapped[int] = mapped_column(ForeignKey("palettes.id"))
 
     folders: Mapped[List["Folder"]] = relationship(back_populates="user")
+    tokens: Mapped[List["Token"]] = relationship(back_populates="user")
 
     def __repr__(self):
         return f"User with email {self.email}"
@@ -48,7 +59,8 @@ class Image(Base):
     base_name: Mapped[str] = mapped_column(String)
     order: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
     version: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
-    updated: Mapped[datetime] = mapped_column(DateTime, default=datetime.now())
+    updated: Mapped[datetime] = mapped_column(
+        DateTime, default=lambda: datetime.now())
 
     folder: Mapped["Folder"] = relationship(back_populates="images")
     palette: Mapped["Palette"] = relationship(back_populates="images")

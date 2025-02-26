@@ -104,3 +104,64 @@ export function getStraightLine(x1, y1, x2, y2) {
         }
     }
 }
+
+
+export function getCircle(x1, y1, x2, y2) {
+    // Draws a circle. The coordinates must form a square
+    let minX = Math.min(x1, x2);
+    let maxX = Math.max(x1, x2);
+    let minY = Math.min(y1, y2);
+    let maxY = Math.max(y1, y2);
+    let radius = (maxX - minX) / 2;
+    let coordinates = [];
+
+    let xDiff = 0;
+    let yQuota;
+
+    // This will compute the pixels on 1/8 of a circle
+    // The result is copied and applied to create a full circle
+    // Each step of the loop represents one y-coordinate
+    // That should minimize the amount of steps needed
+    // No, this isn't working yet
+    // But try and implement a paint function so I can see the results on screen
+    for (let yDiff = 0; yDiff <= Math.ceil(radius * Math.SQRT1_2); yDiff++) {
+        yQuota = yDiff / Math.ceil(radius);
+        xDiff = Math.round(Math.cos(Math.asin(yQuota)) * radius);
+
+        // Circle quadrant 1/8 and 8/8
+        coordinates.push({ x: maxX - xDiff, y: minY + Math.ceil(radius) + yDiff });
+        coordinates.push({ x: maxX - xDiff, y: minY + Math.floor(radius) - yDiff });
+        // Circle quadrant 4/8 and 5/8
+        coordinates.push({ x: minY + xDiff, y: minY + Math.ceil(radius) + yDiff });
+        coordinates.push({ x: minY + xDiff, y: minY + Math.floor(radius) - yDiff });
+        // Circle quadrant 2/8 and 3/8
+        coordinates.push({ x: minX + Math.ceil(radius) + yDiff, y: minY + xDiff });
+        coordinates.push({ x: minX + Math.floor(radius) - yDiff, y: minY + xDiff });
+        // Circle quadrant 6/8 and 7/8
+        coordinates.push({ x: minX + Math.ceil(radius) + yDiff, y: maxY - xDiff });
+        coordinates.push({ x: minX + Math.floor(radius) - yDiff, y: maxY - xDiff });
+    }
+    return coordinates;
+}
+
+export function getEllipse(x1, y1, x2, y2) {
+    // Draws an ellipse
+    let minX = Math.min(x1, x2);
+    let maxX = Math.max(x1, x2);
+    let minY = Math.min(y1, y2);
+    let maxY = Math.max(y1, y2);
+    let radiusX = (maxX - minX) / 2;
+    let radiusY = (maxY - minY) / 2;
+
+    // The algorithm used for circle will not work too well here
+    // I will have to calculate 1/4 of the ellipse
+    // If I increase y by 1 per step, gaps may appear on x-axis at any point
+    // But in that case, I could switch to the other direction,
+    // and increase x by 1 per step without getting gaps on the y-axis
+
+    // Alternatively, I could calculate a circle
+    // on the minimum distance x2-x1, y2-y1
+    // Then I could stretch that circle
+    // But if I do that, I will want to use float values until the end
+    // So I still need to do all the calculations here
+}

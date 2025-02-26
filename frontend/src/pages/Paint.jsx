@@ -3,6 +3,7 @@ import Menu from "src/components/Menu";
 import ToolButton from "src/components/ToolButton";
 import PaletteButton from "src/components/PaletteButton";
 import { standardPalette } from "src/scripts/user_setup";
+import { getCircle } from "src/scripts/geometry";
 
 export default function Paint() {
     const [canvasWidth, setCanvasWidth] = useState(300);
@@ -195,9 +196,27 @@ export default function Paint() {
                     context.fillRect(startX, startY, dx, dy);
                 }
                 else if (tool.tool === "Ellipse") {
-                    context.lineWidth = tool.size;
-                    context.ellipse((startPoint[0] + currentPoint[0]) / 2, (startPoint[1] + currentPoint[1]) / 2, dx / 2, dy / 2, 0, 0, Math.PI * 2);
-                    context.stroke();
+                    // context.lineWidth = tool.size;
+                    // context.ellipse((startPoint[0] + currentPoint[0]) / 2, (startPoint[1] + currentPoint[1]) / 2, dx / 2, dy / 2, 0, 0, Math.PI * 2);
+                    // context.stroke();
+
+                    // Try drawing some circles using my geometry module
+                    let pixels = context.createImageData(50, 50);
+                    let circle = getCircle(0, 0, 50, 50);
+                    circle.forEach(element => {
+                        let index = (element.y * 50 + element.x) * 4;
+                        pixels.data[index] = 0;
+                        pixels.data[index + 1] = 0;
+                        pixels.data[index + 2] = 0;
+                        pixels.data[index + 3] = 255;
+                    });
+                    console.log(circle);
+                    console.log(pixels.data);
+                    context.putImageData(pixels, currentPoint[0], currentPoint[1]);
+                    // I see I've messed up the circle
+                    // It looks like a snowflake
+                    // At least there's some round shapes
+                    // If I tweak it a bit it should turn out alright
                 }
                 else if (tool.tool === "Fill ellipse") {
                     context.ellipse((startPoint[0] + currentPoint[0]) / 2, (startPoint[1] + currentPoint[1]) / 2, dx / 2, dy / 2, 0, 0, Math.PI * 2);

@@ -2,12 +2,35 @@ from pydantic import BaseModel, Field, ConfigDict, EmailStr, List
 from datetime import datetime
 
 
+class Token(BaseModel):
+    # Modify later
+    access_token: str
+    token_type: str
+    model_config = ConfigDict(from_attributes=True)
+
+
+class UserRegister(BaseModel):
+    # Modify later
+    email: str
+    password: str
+    model_config = ConfigDict(from_attributes=True)
+
+
 class User(BaseModel):
     email: EmailStr = Field(
         unique=True, description="User email. Must be unique")
     root_folder_id: int = Field(description="Root folder")
     default_palette_id: int = Field(
         description="Default palette used for new images")
+    model_config = ConfigDict(from_attributes=True)
+
+
+class UserOut(BaseModel):
+    # Modify later
+    email: EmailStr
+    root_folder_id: int
+    default_palette_id: int
+    model_config = ConfigDict(from_attributes=True)
 
 
 class Folder(BaseModel):
@@ -17,6 +40,7 @@ class Folder(BaseModel):
                       description="Full path starting with user email, must be unique")
     user_id: int = Field(description="Owner of folder")
     parent_id: int = Field(description="Parent folder")
+    model_config = ConfigDict(from_attributes=True)
 
 
 class Image(BaseModel):
@@ -33,6 +57,7 @@ class Image(BaseModel):
     updated: datetime = Field(default_factory=datetime.now)
     folder_id: int = Field(description="Folder where image is saved")
     palette_id: int = Field(description="Palette used")
+    model_config = ConfigDict(from_attributes=True)
 
 
 class Palette(BaseModel):
@@ -40,6 +65,7 @@ class Palette(BaseModel):
                       description="Palette name, only required if palette is saved in file system")
     folder_id: int = Field(
         default=None, description="Folder, only required if palette is saved in file system")
+    model_config = ConfigDict(from_attributes=True)
 
 
 class Color(BaseModel):
@@ -48,6 +74,7 @@ class Color(BaseModel):
     red: int = Field(min=0, max=255, description="Red value from 0 to 255")
     green: int = Field(min=0, max=255, description="Green value from 0 to 255")
     blue: int = Field(min=0, max=255, description="Blue value from 0 to 255")
+    model_config = ConfigDict(from_attributes=True)
 
 
 class Layer(BaseModel):
@@ -56,10 +83,12 @@ class Layer(BaseModel):
     order: int = Field(
         description="Layer order starting from 0, higher order layers covers lower order layers")
     image_id: int = Field()
+    model_config = ConfigDict(from_attributes=True)
 
 
 class ColorMode(BaseModel):
     name: List[str] = Field(max_length=100)
+    model_config = ConfigDict(from_attributes=True)
 
 
 class TextLayer(BaseModel):
@@ -74,3 +103,4 @@ class TextLayer(BaseModel):
         description="Layer which this text layer owns and paints on")
     color_mode_id: int = Field(
         default=1, description="Color mode when painting text outline")
+    model_config = ConfigDict(from_attributes=True)
