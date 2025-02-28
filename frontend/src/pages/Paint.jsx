@@ -3,7 +3,8 @@ import Menu from "src/components/Menu";
 import ToolButton from "src/components/ToolButton";
 import PaletteButton from "src/components/PaletteButton";
 import { standardPalette } from "src/scripts/user_setup";
-import { getCircle, getEllipse } from "src/scripts/geometry";
+import { getLine, getHorizontalLine, getVerticalLine, getRectangle, getEllipse } from "src/scripts/geometry";
+import { Drawing } from "src/scripts/drawing";
 
 export default function Paint() {
     const [canvasWidth, setCanvasWidth] = useState(300);
@@ -15,6 +16,7 @@ export default function Paint() {
     const [primaryColor, setPrimaryColor] = useState({ color: "#000000", index: -1 });
     const [secondaryColor, setSecondaryColor] = useState({ color: "#ffffff", index: -1 });
 
+    const drawing = useRef(new Drawing(300, 300));
     const canvasRef = useRef();
     const overlayRef = useRef();
     const docRef = useRef(document);
@@ -126,13 +128,26 @@ export default function Paint() {
         // Converts a color code to a color value
         // Specify colorType out of 0: red, 1: green or 2: blue
         let hex = code.substring(1 + 2 * colorType, 3 + 2 * colorType);
-        console.log(hex, parseInt(hex, 16));
         return parseInt(hex, 16);
     }
 
     function getStart(x1, x2) {
         // Use on x, y to get the upper left corner
         return Math.min(x1, x2);
+    }
+
+    function getLineStart(x1, x2) {
+        // Use on x, y to get the starting line coordinates
+        // Assumes drawing is done in a box with top left corner 0,0
+        if (x2 > x1) return 0;
+        else return x1 - x2;
+    }
+
+    function getLineEnd(x1, x2) {
+        // Use on x, y to get the ending line coordinates
+        // Assumes drawing is done in a box with top left corner 0,0
+        if (x2 > x1) return x2 - x1;
+        else return 0;
     }
 
     function getLength(x1, x2) {
@@ -195,36 +210,40 @@ export default function Paint() {
                 context.beginPath();
 
                 if (tool.tool === "Line") {
-                    context.lineWidth = tool.size;
-                    context.moveTo(startPoint[0], startPoint[1]);
-                    context.lineTo(currentPoint[0], currentPoint[1]);
-                    context.closePath();
-                    context.stroke();
+                    // Nice horizontal line!
+                    // drawing.current.previewGeometry(context, activeTool.current,
+                    //     getHorizontalLine(0, 0, dx - 1),
+                    //     startX, startPoint[1], dx, 1);
+
+                    // Nice vertical line! I should enforce straight line with shift
+                    // drawing.current.previewGeometry(context, activeTool.current,
+                    //     getVerticalLine(0, 0, dy - 1),
+                    //     startPoint[0], startY, 1, dy);
+
+                    // Nice line!
+                    drawing.current.previewGeometry(context, activeTool.current,
+                        getLine(getLineStart(startPoint[0], currentPoint[0]),
+                            getLineStart(startPoint[1], currentPoint[1]),
+                            getLineEnd(startPoint[0], currentPoint[0]),
+                            getLineEnd(startPoint[1], currentPoint[1])),
+                        startX, startY, dx, dy);
                 }
                 else if (tool.tool === "Rectangle") {
-                    context.lineWidth = tool.size;
-                    context.strokeRect(startX + 0.5, startY + 0.5, dx, dy);
+                    // context.lineWidth = tool.size;
+                    // context.strokeRect(startX + 0.5, startY + 0.5, dx, dy);
+
+                    drawing.current.previewGeometry(context, activeTool.current,
+                        getRectangle(0, 0, dx - 1, dy - 1),
+                        startX, startY, dx, dy);
                 }
                 else if (tool.tool === "Fill rectangle") {
                     context.fillRect(startX, startY, dx, dy);
                 }
                 else if (tool.tool === "Ellipse") {
-                    // context.lineWidth = tool.size;
-                    // context.ellipse((startPoint[0] + currentPoint[0]) / 2, (startPoint[1] + currentPoint[1]) / 2, dx / 2, dy / 2, 0, 0, Math.PI * 2);
-                    // context.stroke();
-
-                    // Try drawing some circles using my geometry module
-                    // Nice! Try an ellipse now
-                    let pixels = context.createImageData(dx, dy);
+                    // Draws an ellipse using my geometry module and the drawing class
                     let circle = getEllipse(0, 0, dx - 1, dy - 1);
-                    circle.forEach(element => {
-                        let index = (element.y * dx + element.x) * 4;
-                        pixels.data[index] = tool.red;
-                        pixels.data[index + 1] = tool.green;
-                        pixels.data[index + 2] = tool.blue;
-                        pixels.data[index + 3] = 255;
-                    });
-                    context.putImageData(pixels, startX, startY);
+                    drawing.current.previewGeometry(context, activeTool.current,
+                        circle, startX, startY, dx, dy);
                 }
                 else if (tool.tool === "Fill ellipse") {
                     context.ellipse((startPoint[0] + currentPoint[0]) / 2, (startPoint[1] + currentPoint[1]) / 2, dx / 2, dy / 2, 0, 0, Math.PI * 2);
@@ -301,10 +320,14 @@ export default function Paint() {
 
     useEffect(() => {
         // Sets up mouse listeners and main loop
-        // Paints the canvas white
-        const context = canvasRef.current.getContext("2d");
-        context.fillStyle = "white";
-        context.fillRect(0, 0, canvasWidth, canvasHeight);
+        // Sets up the drawing class
+
+        // I could draw the background white
+        // But it's not a good idea since it ignores palette colors
+        // I should use some easily recognizable transparent pattern in the background
+        // const context = canvasRef.current.getContext("2d");
+        // context.fillStyle = "white";
+        // context.fillRect(0, 0, canvasWidth, canvasHeight);
 
         docRef.current.addEventListener("mousemove", onMove);
         docRef.current.addEventListener("mousedown", onDown);
@@ -313,6 +336,9 @@ export default function Paint() {
         window.oncontextmenu = (event) => { event.preventDefault() }
         setPalette(standardPalette());
         loopId = requestAnimationFrame(drawingLoop);
+
+        drawing.current.setImage(canvasRef);
+        drawing.current.setImage(overlayRef);
 
         return () => {
             docRef.current.removeEventListener("mousemove", onMove);

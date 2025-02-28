@@ -1,6 +1,6 @@
 // Extends drawing? Or the other way around?
 // I can do that later
-class ImageLayer {
+export class ImageLayer {
     constructor(drawing, canvas, x, y, width, height, order) {
         this.drawing = drawing;
         this.canvas = canvas;
@@ -16,12 +16,13 @@ class ImageLayer {
 }
 
 
-class Drawing {
+export class Drawing {
     constructor(width, height) {
         this.width = width;
         this.height = height;
         this.layers = [];
         this.history = [];
+        this.historyInfo = [];
         this.historyIndex = 0;
         this.image = null;
         this.activeLayer = null;
@@ -29,15 +30,15 @@ class Drawing {
     }
 
     setImage(canvas) {
-        this.image = ImageLayer(this, canvas, 0, 0, this.width, this.height, 0);
+        this.image = new ImageLayer(this, canvas, 0, 0, this.width, this.height, 0);
     }
 
     setPreview(canvas) {
-        this.preview = ImageLayer(this, canvas, 0, 0, this.width, this.height, 100);
+        this.preview = new ImageLayer(this, canvas, 0, 0, this.width, this.height, 100);
     }
 
     addLayer(canvas) {
-        this.layers.push(ImageLayer(this, canvas, 0, 0, this.width, this.height, this.layers.length));
+        this.layers.push(new ImageLayer(this, canvas, 0, 0, this.width, this.height, this.layers.length));
     }
 
     print(context, imageLayer) {
@@ -71,24 +72,20 @@ class Drawing {
         this.printFrom(context, 0);
     }
 
-    previewGeometry(context, activeTool, shape) {
-        // So what I need to do is...
-        // Clear the preview image data. Use the passed context
-        // Do I need to call beginPath?
-        // Draw something on the preview. Use the shape, which is given from geometry
-        // Use the context image data to draw
-        // This ensures the result is nice and blocky
+    previewGeometry(context, activeTool, shape, startX, startY, dx, dy) {
+        // Clear the image and draws a preview of a geometrical shape
         context.clearRect(0, 0, this.width, this.height);
-        let imageData = context.getImageData(0, 0, this.width, this.height);
+        let imageData = context.createImageData(dx, dy);
 
-        shape.foreach((coordinates) => {
-            let dataIndex = (coordinates.y * this.width + coordinates.x) * 4;
+        shape.forEach(coordinates => {
+            let dataIndex = (coordinates.y * dx + coordinates.x) * 4;
 
-            imageData[dataIndex] = activeTool.red;
-            imageData[dataIndex + 1] = activeTool.green;
-            imageData[dataIndex + 2] = activeTool.blue;
-            imageData[dataIndex + 3] = 255;
+            imageData.data[dataIndex] = activeTool.red;
+            imageData.data[dataIndex + 1] = activeTool.green;
+            imageData.data[dataIndex + 2] = activeTool.blue;
+            imageData.data[dataIndex + 3] = 255;
         });
+        context.putImageData(imageData, startX, startY);
     }
 
     commitGeometry(context, activeTool, shape) {

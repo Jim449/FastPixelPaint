@@ -2,7 +2,7 @@ export function getHorizontalLine(x1, y1, dx) {
     // Draws a horizontal line from (x1, y1) with length dx
     let coordinates = [];
 
-    for (x = x1; x <= x1 + dx; x++) {
+    for (let x = x1; x <= x1 + dx; x++) {
         coordinates.push({ x: x, y: y1 });
     }
     return coordinates;
@@ -13,7 +13,7 @@ export function getVerticalLine(x1, y1, dy) {
     // Draws a vertical line from (x1, y1) with length dy
     let coordinates = [];
 
-    for (y = y1; y <= y1 + dy; y++) {
+    for (let y = y1; y <= y1 + dy; y++) {
         coordinates.push({ x: x1, y: y });
     }
     return coordinates;
@@ -26,11 +26,10 @@ function getXLine(x1, y1, dx, slope) {
     if (slope == 0) {
         return getHorizontalLine(x1, y1, dx);
     }
-    let fraction = slope / dx;
     let coordinates = [{ x: x1, y: y1 }];
 
     for (let step = 1; step <= dx; step++) {
-        coordinates.push({ x: x + step, y: Math.round(y1 + step * fraction) });
+        coordinates.push({ x: x1 + step, y: Math.round(y1 + step * slope) });
     }
     return coordinates;
 }
@@ -41,11 +40,10 @@ function getYLine(x1, y1, dy, slope) {
     if (slope == 0) {
         return getVerticalLine(x1, y1, dy);
     }
-    let fraction = slope / dy;
     let coordinates = [{ x: x1, y: y1 }];
 
     for (let step = 1; step <= dy; step++) {
-        coordinates.push({ x: Math.round(x1 + step * fraction), y: y + step });
+        coordinates.push({ x: Math.round(x1 + step * slope), y: y1 + step });
     }
     return coordinates;
 }
@@ -59,7 +57,7 @@ export function getLine(x1, y1, x2, y2) {
     if (Math.abs(dx) > Math.abs(dy)) {
         let slope = dy / dx;
 
-        if (dx > 1) {
+        if (dx > 0) {
             return getXLine(x1, y1, dx, slope);
         }
         else {
@@ -69,7 +67,7 @@ export function getLine(x1, y1, x2, y2) {
     else {
         let slope = dx / dy;
 
-        if (dy > 1) {
+        if (dy > 0) {
             return getYLine(x1, y1, dy, slope);
         }
         else {
@@ -106,9 +104,32 @@ export function getStraightLine(x1, y1, x2, y2) {
 }
 
 
+export function getRectangle(x1, x2, y1, y2) {
+    let minX = Math.min(x1, x2);
+    let maxX = Math.max(x1, x2);
+    let minY = Math.min(y1, y2);
+    let maxY = Math.max(y1, y2);
+    let dx = maxX - minX;
+    let dy = maxY - minY - 2;
+
+    let coordinates = getHorizontalLine(minX, minY, dx);
+    coordinates = coordinates.concat(getHorizontalLine(minX, maxY, dx));
+
+    if (dy >= 0) {
+        coordinates = coordinates.concat(getVerticalLine(minX, minY + 1, maxY - minY - 2));
+        coordinates = coordinates.concat(getVerticalLine(maxX, minY + 1, maxY - minY - 2));
+    }
+    return coordinates;
+}
+
+
 export function getCircle(x1, y1, x2, y2) {
     // Draws a circle. The coordinates must form a square
     let radius = (Math.max(x1, x2) - Math.min(x1, x2)) / 2;
+
+    if (radius === 0) {
+        return [];
+    }
     let centerX = Math.min(x1, x2) + radius;
     let centerY = Math.min(y1, y2) + radius;
     let coordinates = [];
@@ -146,6 +167,9 @@ export function getEllipse(x1, y1, x2, y2) {
 
     if (radiusX === radiusY) {
         return getCircle(x1, y1, x2, y2);
+    }
+    else if (radiusX === 0 || radiusY === 0) {
+        return [];
     }
 
     let centerX = Math.min(x1, x2) + radiusX;
