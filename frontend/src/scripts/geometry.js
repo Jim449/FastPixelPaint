@@ -104,7 +104,10 @@ export function getStraightLine(x1, y1, x2, y2) {
 }
 
 
-export function getRectangle(x1, x2, y1, y2) {
+export function getRectangle(x1, y1, x2, y2) {
+    // Returns the outline of a rectangle
+    // with upper left corner (x1, y1)
+    // and lower right corner (x2, y2)
     let minX = Math.min(x1, x2);
     let maxX = Math.max(x1, x2);
     let minY = Math.min(y1, y2);
@@ -118,6 +121,21 @@ export function getRectangle(x1, x2, y1, y2) {
     if (dy >= 0) {
         coordinates = coordinates.concat(getVerticalLine(minX, minY + 1, maxY - minY - 2));
         coordinates = coordinates.concat(getVerticalLine(maxX, minY + 1, maxY - minY - 2));
+    }
+    return coordinates;
+}
+
+
+export function fillRectangle(x1, y1, x2, y2) {
+    // Returns all coordinates within a rectangle
+    // with upper left corner (x1, y1)
+    // and lower right corner (x2, y2)
+    let minX = Math.min(x1, x2);
+    let dx = Math.max(x1, x2) - minX;
+    let coordinates = [];
+
+    for (let y = Math.min(y1, y2); y <= Math.max(y1, y2); y++) {
+        coordinates = coordinates.concat(getHorizontalLine(minX, y, dx));
     }
     return coordinates;
 }
@@ -206,6 +224,43 @@ export function getEllipse(x1, y1, x2, y2) {
         coordinates.push({ x: Math.round(centerX + xStep), y: Math.round(centerY - y) });
         coordinates.push({ x: Math.round(centerX - xStep), y: Math.round(centerY + y) });
         coordinates.push({ x: Math.round(centerX - xStep), y: Math.round(centerY - y) });
+    }
+
+    return coordinates;
+}
+
+
+export function fillEllipse(x1, y1, x2, y2) {
+    // Fills an ellipse
+    let radiusX = (Math.max(x1, x2) - Math.min(x1, x2)) / 2;
+    let radiusY = (Math.max(y1, y2) - Math.min(y1, y2)) / 2;
+
+    if (radiusX === 0 || radiusY === 0) {
+        return [];
+    }
+
+    let centerX = Math.min(x1, x2) + radiusX;
+    let centerY = Math.min(y1, y2) + radiusY;
+    let coordinates = [];
+
+    let startY = (y1 + y2) % 2 === 0 ? 0 : 0.5;
+    let x = 0;
+    let y = 0;
+    let yQuota;
+    let west;
+    let east;
+
+    for (let yStep = startY; yStep <= radiusY; yStep++) {
+        yQuota = yStep / radiusY;
+        x = Math.cos(Math.asin(yQuota)) * radiusX;
+
+        let west = Math.round(centerX - x);
+        let east = Math.round(centerX + x);
+
+        coordinates = coordinates.concat(
+            getHorizontalLine(west, Math.round(centerY + yStep), east - west));
+        coordinates = coordinates.concat(
+            getHorizontalLine(west, Math.round(centerY - yStep), east - west));
     }
 
     return coordinates;

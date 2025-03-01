@@ -3,7 +3,7 @@ import Menu from "src/components/Menu";
 import ToolButton from "src/components/ToolButton";
 import PaletteButton from "src/components/PaletteButton";
 import { standardPalette } from "src/scripts/user_setup";
-import { getLine, getHorizontalLine, getVerticalLine, getRectangle, getEllipse } from "src/scripts/geometry";
+import { getLine, getStraightLine, getCircle, getEllipse, fillEllipse, getRectangle, fillRectangle } from "src/scripts/geometry";
 import { Drawing } from "src/scripts/drawing";
 
 export default function Paint() {
@@ -22,7 +22,7 @@ export default function Paint() {
     const docRef = useRef(document);
     // Had to make this a ref, or it wouldn't update
     const menuOpen = useRef(false);
-    const activeTool = useRef({ tool: "", size: 1, color: "#000000", eraser: "#ffffff", red: 0, blue: 0, green: 0, colorIndex: 0 });
+    const activeTool = useRef({ tool: "", size: 1, color: "#000000", eraser: "#ffffff", red: 0, blue: 0, green: 0, alpha: 255, colorIndex: 0 });
 
     let canvasLeftDown = false;
     let canvasRightDown = false;
@@ -150,6 +150,13 @@ export default function Paint() {
         else return 0;
     }
 
+    function getSquareStart(x1, x2, distance) {
+        // Gets a coordinate from which to draw a square or circle
+        // inside a potential non-square area
+        if (x2 > x1) return x1;
+        else return x1 - distance;
+    }
+
     function getLength(x1, x2) {
         // Returns the distance between two coordinates
         // If x1 == x2, returns 1 since the pixel at x1
@@ -197,57 +204,83 @@ export default function Paint() {
                 let dx = getLength(startPoint[0], currentPoint[0]);
                 let dy = getLength(startPoint[1], currentPoint[1]);
 
-                if (canvasLeftDown) {
-                    context.strokeStyle = tool.color;
-                    context.fillStyle = tool.color;
-                }
-                else {
-                    context.strokeStyle = tool.eraser;
-                    context.fillStyle = tool.eraser;
-                }
-
-                context.clearRect(0, 0, canvasWidth, canvasHeight);
-                context.beginPath();
-
                 if (tool.tool === "Line") {
-                    // Nice horizontal line!
-                    // drawing.current.previewGeometry(context, activeTool.current,
-                    //     getHorizontalLine(0, 0, dx - 1),
-                    //     startX, startPoint[1], dx, 1);
-
-                    // Nice vertical line! I should enforce straight line with shift
-                    // drawing.current.previewGeometry(context, activeTool.current,
-                    //     getVerticalLine(0, 0, dy - 1),
-                    //     startPoint[0], startY, 1, dy);
-
-                    // Nice line!
-                    drawing.current.previewGeometry(context, activeTool.current,
-                        getLine(getLineStart(startPoint[0], currentPoint[0]),
-                            getLineStart(startPoint[1], currentPoint[1]),
-                            getLineEnd(startPoint[0], currentPoint[0]),
-                            getLineEnd(startPoint[1], currentPoint[1])),
-                        startX, startY, dx, dy);
+                    if (shiftDown) {
+                        drawing.current.previewGeometry(context, activeTool.current,
+                            getStraightLine(getLineStart(startPoint[0], currentPoint[0]),
+                                getLineStart(startPoint[1], currentPoint[1]),
+                                getLineEnd(startPoint[0], currentPoint[0]),
+                                getLineEnd(startPoint[1], currentPoint[1])),
+                            startX, startY, dx, dy);
+                    }
+                    else {
+                        drawing.current.previewGeometry(context, activeTool.current,
+                            getLine(getLineStart(startPoint[0], currentPoint[0]),
+                                getLineStart(startPoint[1], currentPoint[1]),
+                                getLineEnd(startPoint[0], currentPoint[0]),
+                                getLineEnd(startPoint[1], currentPoint[1])),
+                            startX, startY, dx, dy);
+                    }
                 }
                 else if (tool.tool === "Rectangle") {
-                    // context.lineWidth = tool.size;
-                    // context.strokeRect(startX + 0.5, startY + 0.5, dx, dy);
-
-                    drawing.current.previewGeometry(context, activeTool.current,
-                        getRectangle(0, 0, dx - 1, dy - 1),
-                        startX, startY, dx, dy);
+                    if (shiftDown) {
+                        let distance = Math.min(dx, dy);
+                        drawing.current.previewGeometry(context, activeTool.current,
+                            getRectangle(0, 0, distance - 1, distance - 1),
+                            getSquareStart(startPoint[0], currentPoint[0], distance),
+                            getSquareStart(startPoint[1], currentPoint[1], distance),
+                            distance, distance);
+                    }
+                    else {
+                        drawing.current.previewGeometry(context, activeTool.current,
+                            getRectangle(0, 0, dx - 1, dy - 1),
+                            startX, startY, dx, dy);
+                    }
                 }
                 else if (tool.tool === "Fill rectangle") {
-                    context.fillRect(startX, startY, dx, dy);
+                    if (shiftDown) {
+                        let distance = Math.min(dx, dy);
+                        drawing.current.previewGeometry(context, activeTool.current,
+                            fillRectangle(0, 0, distance - 1, distance - 1),
+                            getSquareStart(startPoint[0], currentPoint[0], distance),
+                            getSquareStart(startPoint[1], currentPoint[1], distance),
+                            distance, distance);
+                    }
+                    else {
+                        drawing.current.previewGeometry(context, activeTool.current,
+                            fillRectangle(0, 0, dx - 1, dy - 1),
+                            startX, startY, dx, dy);
+                    }
                 }
                 else if (tool.tool === "Ellipse") {
-                    // Draws an ellipse using my geometry module and the drawing class
-                    let circle = getEllipse(0, 0, dx - 1, dy - 1);
-                    drawing.current.previewGeometry(context, activeTool.current,
-                        circle, startX, startY, dx, dy);
+                    if (shiftDown) {
+                        let distance = Math.min(dx, dy);
+                        drawing.current.previewGeometry(context, activeTool.current,
+                            getCircle(0, 0, distance - 1, distance - 1),
+                            getSquareStart(startPoint[0], currentPoint[0], distance),
+                            getSquareStart(startPoint[1], currentPoint[1], distance),
+                            distance, distance);
+                    }
+                    else {
+                        drawing.current.previewGeometry(context, activeTool.current,
+                            getEllipse(0, 0, dx - 1, dy - 1),
+                            startX, startY, dx, dy);
+                    }
                 }
                 else if (tool.tool === "Fill ellipse") {
-                    context.ellipse((startPoint[0] + currentPoint[0]) / 2, (startPoint[1] + currentPoint[1]) / 2, dx / 2, dy / 2, 0, 0, Math.PI * 2);
-                    context.fill();
+                    if (shiftDown) {
+                        let distance = Math.min(dx, dy);
+                        drawing.current.previewGeometry(context, activeTool.current,
+                            fillEllipse(0, 0, distance - 1, distance - 1),
+                            getSquareStart(startPoint[0], currentPoint[0], distance),
+                            getSquareStart(startPoint[1], currentPoint[1], distance),
+                            distance, distance);
+                    }
+                    else {
+                        drawing.current.previewGeometry(context, activeTool.current,
+                            fillEllipse(0, 0, dx - 1, dy - 1),
+                            startX, startY, dx, dy);
+                    }
                 }
             }
         }
@@ -266,6 +299,7 @@ export default function Paint() {
         let rect = canvasRef.current.getBoundingClientRect();
         let x = Math.round(event.clientX - rect.left);
         let y = Math.round(event.clientY - rect.top);
+        shiftDown = (event.shiftKey) ? true : false;
         currentPoint = [x, y];
 
         if (menuOpen.current && menu !== event.target.id && menuLabels.includes(event.target.id)) {
@@ -287,13 +321,13 @@ export default function Paint() {
             let x = Math.round(event.clientX - rect.left);
             let y = Math.round(event.clientY - rect.top);
 
-            if (event.button === 0) {
+            if (event.button === 0 && !canvasRightDown) {
                 canvasLeftDown = true;
                 activeTool.current.red = hexToColor(activeTool.current.color, 0);
                 activeTool.current.green = hexToColor(activeTool.current.color, 1);
                 activeTool.current.blue = hexToColor(activeTool.current.color, 2);
             }
-            else if (event.button === 2) {
+            else if (event.button === 2 && !canvasLeftDown) {
                 canvasRightDown = true;
                 activeTool.current.red = hexToColor(activeTool.current.eraser, 0);
                 activeTool.current.green = hexToColor(activeTool.current.eraser, 1);
@@ -439,7 +473,7 @@ export default function Paint() {
             <div className="flex flex-col grow items-center overflow-scroll bg-gray-300">
                 <div className="bg-gray-300 w-[360px] min-h-[60px]"></div>
                 <div
-                    className="relative w-[300px] h-[300px]">
+                    className="relative w-[300px] h-[300px] bg-gray-400">
                     <canvas
                         id="canvas"
                         ref={canvasRef}
