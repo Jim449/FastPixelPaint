@@ -3,7 +3,7 @@ import Menu from "src/components/Menu";
 import ToolButton from "src/components/ToolButton";
 import PaletteButton from "src/components/PaletteButton";
 import { standardPalette } from "src/scripts/user_setup";
-import { getLine, getStraightLine, getCircle, getEllipse, fillEllipse, getRectangle, fillRectangle } from "src/scripts/geometry";
+import { getDot, getLine, getStraightLine, getCircle, getEllipse, fillEllipse, getRectangle, fillRectangle } from "src/scripts/geometry";
 import { Drawing } from "src/scripts/drawing";
 
 export default function Paint() {
@@ -173,28 +173,17 @@ export default function Paint() {
 
             if (drawingTools.includes(tool.tool)) {
                 const context = canvasRef.current.getContext("2d");
-                context.beginPath();
-
-                if (canvasLeftDown) {
-                    context.strokeStyle = tool.color;
-                    context.fillStyle = tool.color;
-                }
-                else {
-                    context.strokeStyle = tool.eraser;
-                    context.fillStyle = tool.eraser;
-                }
 
                 if (tool.tool === "Pencil") {
-                    context.lineWidth = tool.size;
-                    context.moveTo(lastPoint[0], lastPoint[1]);
-                    context.lineTo(currentPoint[0], currentPoint[1]);
-                    context.closePath();
-                    context.stroke();
-                    // This is all well and good but it's smooth
-                    // It isn't what I'd call pixel art
+                    // I can improve performance by drawing in a smaller box
+                    drawing.current.addToDrawing(context, overlayRef.current, tool,
+                        getLine(lastPoint[0], lastPoint[1],
+                            currentPoint[0], currentPoint[1]));
                 }
                 else if (tool.tool === "Dotter") {
-                    context.fillRect(currentPoint[0], currentPoint[1], tool.size, tool.size);
+                    // I can improve performance by drawing in a miniscule box
+                    drawing.current.addToDrawing(context, overlayRef.current, tool,
+                        getDot(currentPoint[0], currentPoint[1]));
                 }
             }
             else if (geometryTools.includes(tool.tool)) {
@@ -206,7 +195,7 @@ export default function Paint() {
 
                 if (tool.tool === "Line") {
                     if (shiftDown) {
-                        drawing.current.previewGeometry(context, activeTool.current,
+                        drawing.current.previewGeometry(context, tool,
                             getStraightLine(getLineStart(startPoint[0], currentPoint[0]),
                                 getLineStart(startPoint[1], currentPoint[1]),
                                 getLineEnd(startPoint[0], currentPoint[0]),
@@ -214,7 +203,7 @@ export default function Paint() {
                             startX, startY, dx, dy);
                     }
                     else {
-                        drawing.current.previewGeometry(context, activeTool.current,
+                        drawing.current.previewGeometry(context, tool,
                             getLine(getLineStart(startPoint[0], currentPoint[0]),
                                 getLineStart(startPoint[1], currentPoint[1]),
                                 getLineEnd(startPoint[0], currentPoint[0]),
@@ -225,14 +214,14 @@ export default function Paint() {
                 else if (tool.tool === "Rectangle") {
                     if (shiftDown) {
                         let distance = Math.min(dx, dy);
-                        drawing.current.previewGeometry(context, activeTool.current,
+                        drawing.current.previewGeometry(context, tool,
                             getRectangle(0, 0, distance - 1, distance - 1),
                             getSquareStart(startPoint[0], currentPoint[0], distance),
                             getSquareStart(startPoint[1], currentPoint[1], distance),
                             distance, distance);
                     }
                     else {
-                        drawing.current.previewGeometry(context, activeTool.current,
+                        drawing.current.previewGeometry(context, tool,
                             getRectangle(0, 0, dx - 1, dy - 1),
                             startX, startY, dx, dy);
                     }
@@ -240,14 +229,14 @@ export default function Paint() {
                 else if (tool.tool === "Fill rectangle") {
                     if (shiftDown) {
                         let distance = Math.min(dx, dy);
-                        drawing.current.previewGeometry(context, activeTool.current,
+                        drawing.current.previewGeometry(context, tool,
                             fillRectangle(0, 0, distance - 1, distance - 1),
                             getSquareStart(startPoint[0], currentPoint[0], distance),
                             getSquareStart(startPoint[1], currentPoint[1], distance),
                             distance, distance);
                     }
                     else {
-                        drawing.current.previewGeometry(context, activeTool.current,
+                        drawing.current.previewGeometry(context, tool,
                             fillRectangle(0, 0, dx - 1, dy - 1),
                             startX, startY, dx, dy);
                     }
@@ -255,14 +244,14 @@ export default function Paint() {
                 else if (tool.tool === "Ellipse") {
                     if (shiftDown) {
                         let distance = Math.min(dx, dy);
-                        drawing.current.previewGeometry(context, activeTool.current,
+                        drawing.current.previewGeometry(context, tool,
                             getCircle(0, 0, distance - 1, distance - 1),
                             getSquareStart(startPoint[0], currentPoint[0], distance),
                             getSquareStart(startPoint[1], currentPoint[1], distance),
                             distance, distance);
                     }
                     else {
-                        drawing.current.previewGeometry(context, activeTool.current,
+                        drawing.current.previewGeometry(context, tool,
                             getEllipse(0, 0, dx - 1, dy - 1),
                             startX, startY, dx, dy);
                     }
@@ -270,14 +259,14 @@ export default function Paint() {
                 else if (tool.tool === "Fill ellipse") {
                     if (shiftDown) {
                         let distance = Math.min(dx, dy);
-                        drawing.current.previewGeometry(context, activeTool.current,
+                        drawing.current.previewGeometry(context, tool,
                             fillEllipse(0, 0, distance - 1, distance - 1),
                             getSquareStart(startPoint[0], currentPoint[0], distance),
                             getSquareStart(startPoint[1], currentPoint[1], distance),
                             distance, distance);
                     }
                     else {
-                        drawing.current.previewGeometry(context, activeTool.current,
+                        drawing.current.previewGeometry(context, tool,
                             fillEllipse(0, 0, dx - 1, dy - 1),
                             startX, startY, dx, dy);
                     }
@@ -317,18 +306,25 @@ export default function Paint() {
             menuOpen.current = false;
         }
         if (id === "overlay") {
+            // Mouse on canvas, prepare for painting
             let rect = canvasRef.current.getBoundingClientRect();
             let x = Math.round(event.clientX - rect.left);
             let y = Math.round(event.clientY - rect.top);
 
             if (event.button === 0 && !canvasRightDown) {
                 canvasLeftDown = true;
+                // if (drawingTools.includes(activeTool.current.tool)) {
+                //     drawing.current.startDrawing(overlayRef.current.getContext("2d"));
+                // }
                 activeTool.current.red = hexToColor(activeTool.current.color, 0);
                 activeTool.current.green = hexToColor(activeTool.current.color, 1);
                 activeTool.current.blue = hexToColor(activeTool.current.color, 2);
             }
             else if (event.button === 2 && !canvasLeftDown) {
                 canvasRightDown = true;
+                // if (drawingTools.includes(activeTool.current.tool)) {
+                //     drawing.current.startDrawing(overlayRef.current.getContext("2d"));
+                // }
                 activeTool.current.red = hexToColor(activeTool.current.eraser, 0);
                 activeTool.current.green = hexToColor(activeTool.current.eraser, 1);
                 activeTool.current.blue = hexToColor(activeTool.current.eraser, 2);
@@ -339,16 +335,26 @@ export default function Paint() {
 
     const onRelease = useCallback((event) => {
         // Called on mouse release
+        // Commits drawn geometry to canvas
         if (canvasLeftDown || canvasRightDown) {
-            if (geometryTools.includes(activeTool.current.tool)) {
-                let context = canvasRef.current.getContext("2d");
-                context.drawImage(overlayRef.current, 0, 0);
+            if (drawingTools.includes(activeTool.current.tool)) {
+                // let context = canvasRef.current.getContext("2d");
+                // drawing.current.finishDrawing(context, overlayRef.current);
+                let overlayContext = overlayRef.current.getContext("2d");
+                overlayContext.clearRect(0, 0, canvasWidth, canvasHeight);
             }
+            else if (geometryTools.includes(activeTool.current.tool)) {
+                let context = canvasRef.current.getContext("2d");
+                drawing.current.commitGeometry(context, overlayRef.current, activeTool.current,
+                    drawing.current.savedShape, drawing.current.savedX, drawing.current.savedY,
+                    drawing.current.savedWidth, drawing.current.savedHeight);
+
+                let overlayContext = overlayRef.current.getContext("2d");
+                overlayContext.clearRect(0, 0, canvasWidth, canvasHeight);
+            }
+            canvasLeftDown = false;
+            canvasRightDown = false;
         }
-        let overlayContect = overlayRef.current.getContext("2d");
-        overlayContect.clearRect(0, 0, canvasWidth, canvasHeight);
-        canvasLeftDown = false;
-        canvasRightDown = false;
     }, []);
 
 
@@ -372,7 +378,7 @@ export default function Paint() {
         loopId = requestAnimationFrame(drawingLoop);
 
         drawing.current.setImage(canvasRef);
-        drawing.current.setImage(overlayRef);
+        drawing.current.setPreview(overlayRef);
 
         return () => {
             docRef.current.removeEventListener("mousemove", onMove);

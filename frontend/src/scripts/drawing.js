@@ -1,11 +1,18 @@
+import { act } from "react";
+
 export class History {
-    constructor(layer, shape, x, y, width, height) {
+    constructor(layer, shape, x, y, width, height, colorIndex, red, green, blue, alpha) {
         this.layer = layer;
         this.shape = shape;
         this.x = x;
         this.y = y;
         this.width = width;
         this.height = height;
+        this.colorIndex = colorIndex;
+        this.red = red;
+        this.green = green;
+        this.blue = blue;
+        this.alpha = alpha;
     }
 }
 
@@ -19,8 +26,28 @@ export class ImageLayer {
         this.height = height;
         this.order = order;
         this.visible = true;
-        this.indexedColors = [];
+        this.indexedColors = [-1];
         this.colorSet = [];
+
+        for (let i = 0; i < width * height; i++) {
+            this.indexedColors.push(-1);
+        }
+    }
+
+    draw(x, y, colorIndex) {
+        this.indexedColors[(y * this.width + x)] = colorIndex;
+
+        // Might save some time when replacing colors
+        // I should remove colors from colorSet
+        // once they are no longer in use
+        // But this is still better than nothing
+        if (!this.colorSet.includes(colorIndex)) {
+            this.colorSet.push(colorIndex);
+        }
+    }
+
+    getColor(x, y) {
+        return this.indexedColors[(y * this.width + x)];
     }
 }
 
@@ -31,11 +58,16 @@ export class Drawing {
         this.height = height;
         this.layers = [];
         this.history = [];
-        this.history = [];
-        this.historyIndex = 0;
+        this.historyIndex = -1;
         this.image = null;
         this.activeLayer = null;
         this.preview = null;
+        this.savedShape = null;
+        this.savedX = null;
+        this.savedY = null;
+        this.savedWidth = null;
+        this.savedHeight = null;
+        this.savedImageData = null;
     }
 
     setImage(canvas) {
@@ -81,26 +113,74 @@ export class Drawing {
         this.printFrom(context, 0);
     }
 
+
+    startDrawing(context) {
+        this.savedImageData = context.createImageData(this.width, this.height);
+        // this.savedShape = [];
+    }
+
+
+    addToDrawing(context, overlay, activeTool, shape) {
+        // console.log(shape); Looks fine
+        // Do I need to use a draw image?
+        // Then I need to lower the size to make it efficient
+        // Try changing to createImageData above
+
+        let overlayContext = overlay.getContext("2d");
+        let imageData = overlayContext.createImageData(this.width, this.height);
+        let data = imageData.data;
+
+        shape.forEach(coordinates => {
+            let dataIndex = (coordinates.y * this.width + coordinates.x) * 4;
+
+            if (coordinates.x >= 0 && coordinates.x < this.width) {
+                data[dataIndex] = activeTool.red;
+                data[dataIndex + 1] = activeTool.green;
+                data[dataIndex + 2] = activeTool.blue;
+                data[dataIndex + 3] = 255;
+            }
+        });
+        // this.savedShape.concat(shape);
+
+        overlayContext.putImageData(imageData, 0, 0);
+        context.drawImage(overlay, 0, 0);
+    }
+
+
+    finishDrawing(context, overlay) {
+        let overlayContext = overlay.getContext("2d");
+        overlayContext.putImageData(this.savedImageData, 0, 0);
+        context.drawImage(overlay, 0, 0);
+    }
+
     previewGeometry(context, activeTool, shape, startX, startY, dx, dy) {
         // Clear the image and draws a preview of a geometrical shape
         context.clearRect(0, 0, this.width, this.height);
         let imageData = context.createImageData(dx, dy);
+        let data = imageData.data;
 
         shape.forEach(coordinates => {
             let dataIndex = (coordinates.y * dx + coordinates.x) * 4;
 
-            imageData.data[dataIndex] = activeTool.red;
-            imageData.data[dataIndex + 1] = activeTool.green;
-            imageData.data[dataIndex + 2] = activeTool.blue;
-            imageData.data[dataIndex + 3] = 255;
+            data[dataIndex] = activeTool.red;
+            data[dataIndex + 1] = activeTool.green;
+            data[dataIndex + 2] = activeTool.blue;
+            data[dataIndex + 3] = 255;
         });
         context.putImageData(imageData, startX, startY);
+
+        this.savedShape = shape;
+        this.savedX = startX;
+        this.savedY = startY;
+        this.savedWidth = dx;
+        this.savedHeight = dy;
     }
 
-    addHistory(layer, shape, startX, startY, dx, dy) {
+    addHistory(layer, shape, startX, startY, dx, dy, colorIndex, red, green, blue, alpha) {
         // Saves information about the most recent action
         // Keeps a maximum of 20 events
-        action = new History(layer, shape, startX, startY, dx, dy);
+        let action = new History(layer, shape, startX, startY, dx, dy,
+            colorIndex, red, green, blue, alpha);
 
         if (this.historyIndex === 20) {
             this.history.shift();
@@ -116,50 +196,43 @@ export class Drawing {
     }
 
 
-    commitGeometry(context, activeTool, shape, startX, startY, dx, dy) {
-        // I have a preview drawing and a shape
-        // Take the shape and draw to the active layer
-        // I need to draw the indexedColors so that I can save to the database
-        // or manipulate colors through the palette
-        // The active layer shouldn't be a visible canvas
-        // Rather, it should be an offscreen canvas
-        // In that case, I do need to draw on it
-        // Draw the shape onto the image layer
-        // The image layer is an actual canvas
-        // I can draw with drawImage, using the active layer as the image 
-        // I won't have to draw the indexedColors
-        // Draw the layer above the active layer onto the image layer
-        // Repeat until I reach the top layer
+    commitGeometry(context, overlay, activeTool, shape, startX, startY, dx, dy) {
+        // Draws the geometrical shape in overlay to the context
+        // Saves the indexed colors of the image
 
-        let imageData = context.createImageData(dx, dy);
+        // let imageData = context.getImageData(startX, startY, dx, dy);
 
-        shape.foreach((coordinates) => {
-            let drawingIndex = (startY + coordinates.y) * this.width + (startX + coordinates.x);
-            let dataIndex = (coordinates.y * dx + coordinates.x) * 4;
+        shape.forEach((coordinates) => {
+            // let drawingIndex = (startY + coordinates.y) * this.width + (startX + coordinates.x);
+            // let dataIndex = (coordinates.y * dx + coordinates.x) * 4;
 
-            coordinates.lastColor = this.activeLayer.indexedColors[drawingIndex];
+            coordinates.lastColor = this.image.getColor(startX + coordinates.x, startY + coordinates.y);
 
-            this.activeLayer.indexedColors[drawingIndex] = activeTool.colorIndex;
+            // I should paint to the active layer
+            // but I want to try it out with the image first
+            this.image.draw(startX + coordinates.x, startY + coordinates.y,
+                activeTool.colorIndex);
+            // this.activeLayer.indexedColors[drawingIndex] = activeTool.colorIndex;
 
-            coordinates.lastRed = imageData[dataIndex];
-            coordinates.lastGreen = imageData[dataIndex + 1];
-            coordinates.lastBlue = imageData[dataIndex + 2];
-            coordinates.lastAlpha = imageData[dataIndex + 3];
-
-            imageData[dataIndex] = activeTool.red;
-            imageData[dataIndex + 1] = activeTool.green;
-            imageData[dataIndex + 2] = activeTool.blue;
-            imageData[dataIndex + 3] = 255;
+            // Used for undo and redo but I don't know if I'll go for this approach
+            // coordinates.lastRed = imageData.data[dataIndex];
+            // coordinates.lastGreen = imageData.data[dataIndex + 1];
+            // coordinates.lastBlue = imageData.data[dataIndex + 2];
+            // coordinates.lastAlpha = imageData.data[dataIndex + 3];
         });
-        context.putImageData(imageData, startX, startY);
-        this.addHistory(this.activeLayer, shape, startX, startY, dx, dy);
+        context.drawImage(overlay, 0, 0);
+
+        // Change to active layer when I have layers
+        // this.addHistory(this.image, shape, startX, startY, dx, dy, activeTool.colorIndex,
+        //     activeTool.red, activeTool.green, activeTool.blue, activeTool.alpha);
     }
 
     undo(context) {
-        if (this.history.length == 0) return;
+        // Undoes the last drawing
+        if (this.historyIndex == -1) return;
 
-        let action = this.history.pop();
-        this.historyIndex.pop();
+        let action = this.history[historyIndex];
+        this.historyIndex -= 1;
         let imageData = context.createImageData(action.width, action.height);
 
         action.shape.foreach((coordinates) => {
@@ -172,6 +245,30 @@ export class Drawing {
             imageData[dataIndex + 1] = coordinates[drawingIndex].lastGreen;
             imageData[dataIndex + 2] = coordinates[drawingIndex].lastBlue;
             imageData[dataIndex + 3] = coordinates[drawingIndex].lastAlpha;
+        });
+        context.putImageData(imageData, action.x, action.y);
+    }
+
+
+    redo(context) {
+        // Redoes the last drawing
+        if (this.historyIndex == this.history.length - 1) return;
+
+        this.historyIndex += 1;
+        let action = this.history[this.historyIndex];
+        let imageData = context.createImageData(action.width, action.height);
+
+        action.shape.forEach((coordinates) => {
+            let dataIndex = (coordinates.y * action.width + coordinates.x) * 4;
+
+            this.image.draw(action.x + coordinates.x, action.y + coordinates.y,
+                action.colorIndex);
+            // this.activeLayer.indexedColors[drawingIndex] = activeTool.colorIndex;
+
+            imageData[dataIndex] = action.red;
+            imageData[dataIndex + 1] = action.green;
+            imageData[dataIndex + 2] = action.blue;
+            imageData[dataIndex + 3] = action.alpha;
         });
         context.putImageData(imageData, action.x, action.y);
     }

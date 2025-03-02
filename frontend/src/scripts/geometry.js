@@ -1,3 +1,8 @@
+export function getDot(x, y) {
+    return [{ x: x, y: y }];
+}
+
+
 export function getHorizontalLine(x1, y1, dx) {
     // Draws a horizontal line from (x1, y1) with length dx
     let coordinates = [];
