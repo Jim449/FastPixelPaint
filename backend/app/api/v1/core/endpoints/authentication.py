@@ -1,9 +1,11 @@
+from typing import Annotated
 from app.db_setup import get_db
-from app.security import hash_password, verify_password, create_database_token
+from app.security import hash_password, verify_password, create_database_token, get_current_token
 
 import app.api.v1.core.models as model
 import app.api.v1.core.schemas as schemas
-from fastapi import APIRouter, Depends, FastAPI, HTTPException, Request, status
+from fastapi import APIRouter, Depends, FastAPI, HTTPException, Request, Response, status
+from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy import delete, insert, select, update
 from sqlalchemy.orm import Session, joinedload, selectinload
 from sqlalchemy.exc import IntegrityError
@@ -12,35 +14,44 @@ from pydantic import ValidationError
 
 router = APIRouter(prefix="/auth")
 
-# Copied from exercise. Modify later
+
+@router.post("/register", status_code=status.HTTP_201_CREATED)
+def register_user(user: model.UserRegister, db: Session = Depends(get_db)) -> schemas.UserOut:
+    # TODO ADD VALIDATION TO CREATION OF PASSWORD
+    hashed_password = hash_password(user.password)
+    new_user = model.User(
+        **user.model_dump(exclude={"password"}), hashed_password=hashed_password
+    )
+    # Give the new user a root folder and a default palette!
+    db.add(new_user)
+    db.commit()
+    return new_user
 
 
-# @router.post("/register", status_code=status.HTTP_201_CREATED)
-# def register_user(
-#     user: model.UserRegister, db: Session = Depends(get_db)
-# ) -> schemas.UserOutSchema:
-#     # TODO ADD VALIDATION TO CREATION OF PASSWORD
-#     hashed_password = hash_password(user.password)
-#     # We exclude password from the validated pydantic model since the field/column is called hashed_password, we add that manually
-#     new_user = model.User(
-#         **user.model_dump(exclude={"password"}), hashed_password=hashed_password
-#     )
-#     db.add(new_user)
-#     db.commit()
-#     return new_user
+@router.post("/login", status_code=status.HTTP_200_OK)
+def login(form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
+          db: Session = Depends(get_db)) -> schemas.Token:
+    # OAuth: Like a pydantic schema
 
-# @router.post("/login")
-# def login(form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
-#           db: Session = Depends(get_db)):
-#     # OAuth: Like a pydantic schema
+    user = db.execute(
+        select(model.User).where(model.User.email == form_data.username)
+    ).scalars().first()
 
-#     # Get the user
-#     user = None
-#     # Write some verification
-#     # if not user:
-#         # pass
-#     # if not verify_password:
-#         # pass
-#     # If success
-#     access_token = create_database_token(user_id=user.id db=db)
-#     return {"access_token": access_token.token, "token_type": "bearer"}
+    if not user:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,
+                            detail="Wrong username or password")
+
+    if not verify_password(form_data.password, user.password_hash):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,
+                            detail="Wrong username or password")
+
+    access_token = create_database_token(user_id=user.id, db=db)
+    return {"access_token": access_token.token, "token_type": "bearer"}
+
+
+@router.post("/logout", status_code=status.HTTP_204_NO_CONTENT)
+def logout(token: model.Token = Depends(get_current_token),
+           db: Session = Depends(get_db)):
+    db.execute(delete(model.Token).where(model.Token.token == token.token))
+    db.commit()
+    return Response(status_code=status.HTTP_204_NO_CONTENT)

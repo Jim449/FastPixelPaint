@@ -18,13 +18,19 @@ export default function Header() {
     //     // Use the fetchUser from authstore
     // });
 
-    return <div className="flex">
-        <nav>
-            <ul>
-                <li><Link to="home">Home</Link></li>
-                <li><Link to="paint">Paint</Link></li>
-                <li><Link to="about">About</Link></li>
-                <li><Link to="login">Login</Link></li>
+    return <div className="flex bg-gray-50 border-b border-gray-300">
+        <nav className="flex flex-grow">
+            <ul className="flex mx-3 pt-2 pb-2">
+                <li><Link to="home"
+                    className="cursor-pointer hover:bg-gray-200 pt-1 pb-2 px-3">Home</Link></li>
+                <li><Link to="paint"
+                    className="cursor-pointer hover:bg-gray-200 pt-1 pb-2 px-3">Paint</Link></li>
+                <li><Link to="about"
+                    className="cursor-pointer hover:bg-gray-200 pt-1 pb-2 px-3">About</Link></li>
+            </ul>
+            <ul className="flex flex-grow justify-end mx-3 pt-2 pb-2">
+                <li><Link to="login"
+                    className="cursor-pointer hover:bg-gray-200 pt-1 pb-2 px-3 ml-auto">Login</Link></li>
             </ul>
         </nav>
     </div>

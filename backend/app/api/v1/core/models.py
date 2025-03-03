@@ -12,6 +12,7 @@ class Base(DeclarativeBase):
 
 class Token(Base):
     __tablename__ = "tokens"
+    token: Mapped[str] = mapped_column(String)
     created: Mapped[datetime] = mapped_column(
         DateTime, default=lambda: datetime.now())
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
@@ -23,6 +24,8 @@ class User(Base):
     __tablename__ = "users"
     email: Mapped[str] = mapped_column(String, unique=True)
     password_hash: Mapped[str] = mapped_column(String(255))
+    created: Mapped[datetime] = mapped_column(
+        DateTime, default=lambda: datetime.now())
     root_folder_id: Mapped[int] = mapped_column(ForeignKey("folders.id"))
     default_palette_id: Mapped[int] = mapped_column(ForeignKey("palettes.id"))
 

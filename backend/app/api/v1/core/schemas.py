@@ -3,7 +3,6 @@ from datetime import datetime
 
 
 class Token(BaseModel):
-    # Modify later
     access_token: str
     token_type: str
     model_config = ConfigDict(from_attributes=True)
@@ -11,8 +10,9 @@ class Token(BaseModel):
 
 class UserRegister(BaseModel):
     # Modify later
-    email: str
-    password: str
+    email: EmailStr = Field(unique=True)
+    # Regex to enforce numbers / special characters?
+    password: str = Field(min_length=8, max_length=50)
     model_config = ConfigDict(from_attributes=True)
 
 
@@ -26,7 +26,6 @@ class User(BaseModel):
 
 
 class UserOut(BaseModel):
-    # Modify later
     email: EmailStr
     root_folder_id: int
     default_palette_id: int
