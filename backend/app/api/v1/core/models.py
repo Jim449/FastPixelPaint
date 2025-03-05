@@ -26,11 +26,10 @@ class User(Base):
     password_hash: Mapped[str] = mapped_column(String(255))
     created: Mapped[datetime] = mapped_column(
         DateTime, default=lambda: datetime.now())
-    root_folder_id: Mapped[int] = mapped_column(ForeignKey("folders.id"))
-    default_palette_id: Mapped[int] = mapped_column(ForeignKey("palettes.id"))
 
     folders: Mapped[List["Folder"]] = relationship(back_populates="user")
     tokens: Mapped[List["Token"]] = relationship(back_populates="user")
+    palettes: Mapped[List["Palette"]] = relationship(back_populates="user")
 
     def __repr__(self):
         return f"User with email {self.email}"
@@ -43,6 +42,7 @@ class Folder(Base):
         ForeignKey("folder.id"), nullable=True)
     name: Mapped[str] = mapped_column(String)
     path: Mapped[str] = mapped_column(String)
+    root: Mapped[bool] = mapped_column(Boolean, default=False)
 
     user: Mapped["User"] = relationship(back_populates="folders")
     images: Mapped[List["Image"]] = relationship(back_populates="folder")
@@ -75,13 +75,15 @@ class Image(Base):
 
 class Palette(Base):
     __tablename__ = "palettes"
-    folder_id: Mapped[Optional[int]] = mapped_column(
-        ForeignKey("folder.id"), nullable=True)
+    folder_id: Mapped[int] = mapped_column(ForeignKey("folder.id"))
+    user_id: Mapped[int] = mapped_column(ForeignKey("user.id"))
     name: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    default_palette: Mapped[bool] = mapped_column(Boolean, default=False)
 
     images: Mapped[List["Image"]] = relationship(back_populates="palette")
     folder: Mapped["Folder"] = relationship(back_populates="palettes")
     colors: Mapped[List["Color"]] = relationship(back_populates="palette")
+    user: Mapped["User"] = relationship(back_populates="palettes")
 
     def __repr__(self):
         return f"Palette {self.id}"

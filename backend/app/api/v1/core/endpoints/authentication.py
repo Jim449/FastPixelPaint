@@ -4,6 +4,7 @@ from app.security import hash_password, verify_password, create_database_token, 
 
 import app.api.v1.core.models as model
 import app.api.v1.core.schemas as schemas
+from app.api.v1.core.colors import dark_palette, bright_palette, standard_palette
 from fastapi import APIRouter, Depends, FastAPI, HTTPException, Request, Response, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy import delete, insert, select, update
@@ -22,8 +23,16 @@ def register_user(user: model.UserRegister, db: Session = Depends(get_db)) -> sc
     new_user = model.User(
         **user.model_dump(exclude={"password"}), hashed_password=hashed_password
     )
-    # Give the new user a root folder and a default palette!
-    db.add(new_user)
+    root_folder = model.Folder(
+        name="Home", path="Home", user=new_user, root=True)
+    dark_palette = model.Palette(
+        name="Dark palette", folder=root_folder, colors=dark_palette)
+    bright_palette = model.Palette(
+        name="Bright palette", folder=root_folder, colors=bright_palette)
+    standard_palette = model.Palette(
+        name="Standard palette", folder=root_folder, default_palette=True, colors=standard_palette)
+    db.add_all([new_user, root_folder, dark_palette,
+               bright_palette, standard_palette])
     db.commit()
     return new_user
 
@@ -31,7 +40,6 @@ def register_user(user: model.UserRegister, db: Session = Depends(get_db)) -> sc
 @router.post("/login", status_code=status.HTTP_200_OK)
 def login(form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
           db: Session = Depends(get_db)) -> schemas.Token:
-    # OAuth: Like a pydantic schema
 
     user = db.execute(
         select(model.User).where(model.User.email == form_data.username)

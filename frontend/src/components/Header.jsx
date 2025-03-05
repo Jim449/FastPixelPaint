@@ -21,7 +21,7 @@ export default function Header() {
     return <div className="flex bg-gray-50 border-b border-gray-300">
         <nav className="flex flex-grow">
             <ul className="flex mx-3 pt-2 pb-2">
-                <li><Link to="home"
+                <li><Link to=""
                     className="cursor-pointer hover:bg-gray-200 pt-1 pb-2 px-3">Home</Link></li>
                 <li><Link to="paint"
                     className="cursor-pointer hover:bg-gray-200 pt-1 pb-2 px-3">Paint</Link></li>
