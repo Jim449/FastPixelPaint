@@ -34,18 +34,19 @@ export default function Registration() {
 
     async function onSubmit(event) {
         event.preventDefault();
+        setServerError("");
         validateEmail();
         validatePassword();
 
         if (emailError.length > 0 || passwordError.length > 0) return;
 
         try {
-            const response = await fetch("http:/localhost:8000/auth/register",
+            const response = await fetch("http://localhost:8000/v1/auth/register",
                 {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({
-                        username: email,
+                        email: email,
                         password: password
                     })
                 });
@@ -55,16 +56,16 @@ export default function Registration() {
                 navigate("login")
             }
             else {
-                setServerError("Login failed due to unexpected error");
+                setServerError("Registration failed due to unexpected error");
             }
         }
         catch {
-            setServerError("Login failed due to unexpected error");
+            setServerError("Registration failed due to unexpected error");
         }
     }
 
     return <div className="flex flex-col self-center items-center w-[70%]">
-        <h1 className="text-4xl mx-auto p-6">Register an account</h1>
+        <h1 className="text-6xl mx-auto p-6 font-[Crumbled_pixels]">Register an account</h1>
         <form className="bg-white border border-gray-300 rounded-lg w-80">
             <div className="flex flex-col p-3">
                 <label
@@ -77,7 +78,6 @@ export default function Registration() {
                     autoComplete="email"
                     required
                     placeholder="Enter your email"
-                    className="focus:border-blue-300"
                     value={email}
                     onChange={(event) => setEmail(event.target.value)}
                     onBlur={validateEmail}></input>
@@ -94,7 +94,6 @@ export default function Registration() {
                     autoComplete="current-password"
                     required
                     placeholder="Enter a password"
-                    className="focus:border-blue-300"
                     value={password}
                     onChange={(event) => setPassword(event.target.value)}
                     onBlur={validatePassword}></input>
@@ -105,6 +104,7 @@ export default function Registration() {
                     onClick={onSubmit}
                     className="cursor-pointer bg-gray-200 border border-gray-300 px-2 py-1"
                     type="submit">Register</button>
+                {serverError && <p className="text-red-800 text-xs">{serverError}</p>}
             </div>
         </form>
     </div>

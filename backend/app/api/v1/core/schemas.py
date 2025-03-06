@@ -1,4 +1,5 @@
-from pydantic import BaseModel, Field, ConfigDict, EmailStr, List
+from pydantic import BaseModel, Field, ConfigDict, EmailStr
+from typing import List
 from datetime import datetime
 
 
@@ -9,7 +10,6 @@ class Token(BaseModel):
 
 
 class UserRegister(BaseModel):
-    # Modify later
     email: EmailStr = Field(unique=True)
     # Regex to enforce numbers / special characters?
     password: str = Field(min_length=8, max_length=50)
@@ -19,16 +19,12 @@ class UserRegister(BaseModel):
 class User(BaseModel):
     email: EmailStr = Field(
         unique=True, description="User email. Must be unique")
-    root_folder_id: int = Field(description="Root folder")
-    default_palette_id: int = Field(
-        description="Default palette used for new images")
     model_config = ConfigDict(from_attributes=True)
 
 
 class UserOut(BaseModel):
-    email: EmailStr
-    root_folder_id: int
-    default_palette_id: int
+    email: EmailStr = Field(
+        unique=True, description="User email. Must be unique")
     model_config = ConfigDict(from_attributes=True)
 
 
@@ -64,6 +60,12 @@ class Palette(BaseModel):
                       description="Palette name, only required if palette is saved in file system")
     folder_id: int = Field(
         default=None, description="Folder, only required if palette is saved in file system")
+    user_id: int = Field(
+        default=None, description="User, not required for universal palettes")
+    default_palette: bool = Field(
+        default=False, description="Default palette for new paintings")
+    universal: bool = Field(
+        default=False, description="If true, palette is accessible by anyone but noone can save changes")
     model_config = ConfigDict(from_attributes=True)
 
 

@@ -39,10 +39,12 @@ class Folder(Base):
     __tablename__ = "folders"
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
     parent_id: Mapped[Optional[int]] = mapped_column(
-        ForeignKey("folder.id"), nullable=True)
+        ForeignKey("folders.id"), nullable=True)
     name: Mapped[str] = mapped_column(String)
     path: Mapped[str] = mapped_column(String)
     root: Mapped[bool] = mapped_column(Boolean, default=False)
+    created: Mapped[datetime] = mapped_column(
+        DateTime, default=lambda: datetime.now())
 
     user: Mapped["User"] = relationship(back_populates="folders")
     images: Mapped[List["Image"]] = relationship(back_populates="folder")
@@ -75,10 +77,15 @@ class Image(Base):
 
 class Palette(Base):
     __tablename__ = "palettes"
-    folder_id: Mapped[int] = mapped_column(ForeignKey("folder.id"))
-    user_id: Mapped[int] = mapped_column(ForeignKey("user.id"))
+    folder_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey("folders.id"), nullable=True)
+    user_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey("users.id"), nullable=True)
     name: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     default_palette: Mapped[bool] = mapped_column(Boolean, default=False)
+    universal: Mapped[bool] = mapped_column(Boolean, default=False)
+    updated: Mapped[datetime] = mapped_column(
+        DateTime, default=lambda: datetime.now())
 
     images: Mapped[List["Image"]] = relationship(back_populates="palette")
     folder: Mapped["Folder"] = relationship(back_populates="palettes")

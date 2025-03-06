@@ -10,26 +10,30 @@ from app.db_setup import get_db
 from app.settings import settings
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
-from passlib.context import CryptContext
+# from passlib.context import CryptContext
+from pwdlib.hashers.bcrypt import BcryptHasher
 from pydantic import ValidationError
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="v1/auth/token")
 
-# Passlib might not work any more. Search for another solution
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+# Passlib might not work any more. I'm going to try pwdlib with bcrypt
+# pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+password_hash = BcryptHasher()
 
 DEFAULT_ENTROPY = 32  # number of bytes to return by default
 _sysrand = SystemRandom()
 
 
 def hash_password(password):
-    return pwd_context.hash(password)
+    # return pwd_context.hash(password)
+    return password_hash.hash(password)
 
 
 def verify_password(plain_password, hashed_password):
-    return pwd_context.verify(plain_password, hashed_password)
+    # return pwd_context.verify(plain_password, hashed_password)
+    return password_hash.verify(plain_password, hashed_password)
 
 
 def token_urlsafe(nbytes=None):
@@ -80,6 +84,19 @@ def get_current_user(token: Annotated[str, Depends(oauth2_scheme)],
     token = verify_token_access(token_str=token, db=db)
     user = token.user
     return user
+
+
+def get_user_or_none(token: Annotated[str, Depends(oauth2_scheme)],
+                     db: Session = Depends(get_db)):
+    if not token:
+        return None
+
+    try:
+        token = verify_token_access(token_str=token, db=db)
+        user = token.user
+        return user
+    except HTTPException:
+        return None
 
 
 def get_current_token(token: Annotated[str, Depends(oauth2_scheme)],

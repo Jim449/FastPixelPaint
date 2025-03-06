@@ -1,4 +1,6 @@
 import app.api.v1.core.models as model
+from app.db_setup import init_db, get_db
+from sqlalchemy.orm import Session
 
 
 def gradient(base_red, base_green, base_blue, start_index, steps):
@@ -45,7 +47,7 @@ def dark_palette():
     palette.extend(gradient(20, 16, 4, 56, 8))
     # 5 - pale brown, pink purple
     palette.extend(gradient(20, 12, 8, 64, 8))
-    palette.extend(gradient(20, 8, 12, 72))
+    palette.extend(gradient(20, 8, 12, 72, 8))
     # 6 - purple, pale red green
     palette.extend(gradient(20, 4, 16, 80, 8))
     palette.extend(gradient(16, 16, 8, 88, 8))
@@ -169,3 +171,17 @@ def standard_palette():
     palette.extend(gradient(20, 12, 8, 144, 8))
 
     return palette
+
+
+if __name__ == "__main__":
+    init_db()
+    db_gen: Session = get_db()
+    db = next(db_gen)
+    dark_colors = model.Palette(
+        name="Dark palette", universal=True, colors=dark_palette())
+    bright_colors = model.Palette(
+        name="Bright palette", universal=True, colors=bright_palette())
+    standard_colors = model.Palette(
+        name="Standard palette", universal=True, default_palette=True, colors=standard_palette())
+    db.add_all([dark_colors, bright_colors, standard_colors])
+    db.commit()

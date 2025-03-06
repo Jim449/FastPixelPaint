@@ -1,5 +1,5 @@
 from app.db_setup import get_db
-from app.security import get_current_user, get_current_token, oauth2_scheme
+from app.security import get_current_user, get_current_token, get_user_or_none, oauth2_scheme
 import app.api.v1.core.models as model
 from fastapi import APIRouter, Depends, FastAPI, HTTPException, Request, status
 from sqlalchemy import delete, insert, select, update
@@ -16,9 +16,34 @@ def get_image(id: int, db: Session = Depends(get_db)):
 
 
 @router.get("/palette/{id}", status_code=status.HTTP_200_OK)
-def get_image(id: int, db: Session = Depends(get_db)):
-    images = db.scalars(select(model.Image.where(model.Image.id == id))).all()
-    return images
+def get_palette(id: int, user=Depends(get_user_or_none),
+                db: Session = Depends(get_db)):
+    palette = db.scalars(
+        select(model.Palette.where(model.Palette.id == id))).first()
+
+    if not user:
+        if palette.universal:
+            return palette
+    elif user.id == palette.user_id:
+        return palette
+    else:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,
+                            detail="Palette not accessible by current user")
+
+
+@router.get("/user_palettes", status_code=status.HTTP_200_OK)
+def get_palettes(id: int, user=Depends(get_current_user),
+                 db: Session = Depends(get_db)):
+    palette = db.scalars(
+        select(model.Palette.where(model.Palette.universal))).all()
+    return palette
+
+
+@router.get("/universal_palettes", status_code=status.HTTP_200_OK)
+def get_universal_palettes(id: int, db: Session = Depends(get_db)):
+    palette = db.scalars(
+        select(model.Palette.where(model.Palette.universal))).all()
+    return palette
 
 
 @router.get("/folder/{id}", status_code=status.HTTP_200_OK)
