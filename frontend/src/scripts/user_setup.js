@@ -1,4 +1,3 @@
-
 export function standardPalette() {
     let codes = [
         "#000000", "#111111", "#222222", "#333333", // 1 - GRAYSCALE 1
@@ -68,7 +67,7 @@ export function standardPalette() {
     let palette = [];
 
     for (let i = 0; i < 256; i++) {
-        palette.push({ index: i, color: codes[i] });
+        palette.push({ index: i, order: i, color: codes[i] });
     }
     return palette;
 }

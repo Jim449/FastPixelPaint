@@ -1,4 +1,51 @@
-import { act } from "react";
+export function colorToHex(value) {
+    let result = value.toString(16);
+    if (result.length == 1) {
+        return "0" + result;
+    }
+    else {
+        return result;
+    }
+}
+
+
+export function rgbToHex(red, green, blue) {
+    return "#" + colorToHex(red) + colorToHex(green) + colorToHex(blue);
+}
+
+
+export function hexToColor(code, colorType) {
+    // Converts a color code to a color value
+    // Specify colorType out of 0: red, 1: green or 2: blue
+    let hex = code.substring(1 + 2 * colorType, 3 + 2 * colorType);
+    return parseInt(hex, 16);
+}
+
+export class Palette {
+    constructor() {
+
+    }
+}
+
+export class PaletteColor {
+    constructor(red, green, blue, index, order) {
+        this.red = red;
+        this.green = green;
+        this.blue = blue;
+        this.index = index;
+        this.order = order;
+        this.color = rgbToHex(red, green, blue);
+        this.no_red = rgbToHex(0, green, blue);
+        this.no_green = rgbToHex(red, 0, blue);
+        this.no_blue = rgbToHex(red, green, 0);
+        this.full_red = rgbToHex(255, green, blue);
+        this.full_green = rgbToHex(red, 255, blue);
+        this.full_blue = rgbToHex(red, green, 255);
+        this.red_quota = String(Math.round(100 * red / 255)) + "%";
+        this.green_quota = String(Math.round(100 * green / 255)) + "%";
+        this.blue_quota = String(Math.round(100 * blue / 255)) + "%";
+    }
+}
 
 export class History {
     constructor(layer, shape, x, y, width, height, colorIndex, red, green, blue, alpha) {

@@ -4,9 +4,10 @@ import ToolButton from "src/components/ToolButton";
 import PaletteButton from "src/components/PaletteButton";
 import { standardPalette } from "src/scripts/user_setup";
 import { getDot, getLine, getStraightLine, getCircle, getEllipse, fillEllipse, getRectangle, fillRectangle } from "src/scripts/geometry";
-import { Drawing } from "src/scripts/drawing";
+import { Drawing, PaletteColor } from "src/scripts/drawing";
 import { authStore } from "src/store/authStore";
 import { useNavigate } from "react-router-dom";
+import { hexToColor } from "../scripts/drawing";
 
 export default function Paint() {
     const { token } = authStore();
@@ -19,8 +20,12 @@ export default function Paint() {
     const [palette, setPalette] = useState([]);
     const [menu, setMenu] = useState("");
     const [tool, setTool] = useState("");
-    const [primaryColor, setPrimaryColor] = useState({ color: "#000000", index: -1 });
-    const [secondaryColor, setSecondaryColor] = useState({ color: "#ffffff", index: -1 });
+    // const [primaryColor, setPrimaryColor] = useState({ color: "#000000", index: -1, redness: 0, greeness: 0, blueness: 0, no_red: 0, no_green: 0, no_blue: 0, full_red: 0, full_green: 0, full_blue: 0});
+    // const [secondaryColor, setSecondaryColor] = useState({ color: "#ffffff", index: -1 });
+    // Let's try using a class state
+    // Not very reactive perhaps but it shortens things down and performs some color calculations during initialization
+    const [primaryColor, setPrimaryColor] = useState(new PaletteColor(0, 0, 0, -1 - 1));
+    const [secondaryColor, setSecondaryColor] = useState(new PaletteColor(255, 255, 255, -1 - 1));
     const [loggedIn, setLoggedIn] = useState((token) ? true : false);
 
     const drawing = useRef(new Drawing(300, 300));
@@ -111,33 +116,21 @@ export default function Paint() {
         activeTool.current.tool = event.target.id;
     }
 
-    function onPaletteClick(event, index, color) {
-        setPrimaryColor({ color: color, index: index });
+    function onPaletteClick(event, index, order, color) {
+        let red = hexToColor(color, 0);
+        let green = hexToColor(color, 1);
+        let blue = hexToColor(color, 2);
+        setPrimaryColor(new PaletteColor(red, green, blue, index, order));
         activeTool.current.color = color;
         activeTool.current.colorIndex = index;
     }
 
-    function onPaletteRightClick(event, index, color) {
-        setSecondaryColor({ color: color, index: index });
+    function onPaletteRightClick(event, index, order, color) {
+        let red = hexToColor(color, 0);
+        let green = hexToColor(color, 1);
+        let blue = hexToColor(color, 2);
+        setSecondaryColor(new PaletteColor(red, green, blue, index, order));
         activeTool.current.eraser = color;
-    }
-
-    function colorToHex(value) {
-        let result = value.toString(16);
-        if (result.length == 1) {
-            return "0" + result;
-        }
-        else {
-            return result;
-        }
-    }
-
-
-    function hexToColor(code, colorType) {
-        // Converts a color code to a color value
-        // Specify colorType out of 0: red, 1: green or 2: blue
-        let hex = code.substring(1 + 2 * colorType, 3 + 2 * colorType);
-        return parseInt(hex, 16);
     }
 
     function getStart(x1, x2) {
@@ -172,7 +165,6 @@ export default function Paint() {
         // should still be painted
         return Math.abs(x2 - x1) + 1;
     }
-
 
     // Drawing in here rather than in mousemove event should be cheaper
     function drawingLoop(time) {
@@ -366,6 +358,7 @@ export default function Paint() {
 
 
     async function get_palette(id) {
+        // Returns a palette with a specific id or the users default palette 
         try {
             let path = (id === null) ? "http://localhost:8000/default_palette" : `http://localhost:8000/palette${id}`;
 
@@ -378,10 +371,10 @@ export default function Paint() {
 
             if (!response.ok) throw new Error("Error when fetching palette");
 
-            // I should get all the colors and set the state
-            console.log(data);
-            // const codes = [];
-            // data.colors.forEach(element => {});
+            const codes = data.colors.map((item) => {
+                rgbToHex(item.red, item.green, item.blue);
+            });
+            setPalette(codes);
         }
         catch { }
     }
@@ -390,23 +383,14 @@ export default function Paint() {
         // Sets up mouse listeners and main loop
         // Sets up the drawing class
 
-        // I could draw the background white
-        // But it's not a good idea since it ignores palette colors
-        // I should use some easily recognizable transparent pattern in the background
-        // const context = canvasRef.current.getContext("2d");
-        // context.fillStyle = "white";
-        // context.fillRect(0, 0, canvasWidth, canvasHeight);
-
         docRef.current.addEventListener("mousemove", onMove);
         docRef.current.addEventListener("mousedown", onDown);
         docRef.current.addEventListener("mouseup", onRelease);
 
         window.oncontextmenu = (event) => { event.preventDefault() }
 
-        get_palette(null);
-
-        // Not going to need this for much longer
-        setPalette(standardPalette());
+        // get_palette(null);
+        setPalette(standardPalette);
 
         loopId = requestAnimationFrame(drawingLoop);
 
@@ -538,6 +522,7 @@ export default function Paint() {
                             key={color.index}
                             index={color.index}
                             color={color.color}
+                            order={color.order}
                             action={onPaletteClick}
                             rightClick={onPaletteRightClick}>
                         </PaletteButton>)}
@@ -551,7 +536,26 @@ export default function Paint() {
                         style={{ background: secondaryColor.color }}></div>
                 </div>
                 <div className="flex flex-col">
-                    Layers
+                    <p className="text-xs">Set primary color</p>
+                    <div
+                        className="w-28 h-3 m-1 border border-gray-300"
+                        style={{ backgroundImage: `linear-gradient(in srgb to right, ${primaryColor.no_red}, ${primaryColor.color} ${primaryColor.red_quota}, ${primaryColor.full_red})` }}></div>
+                    <div
+                        className="w-28 h-3 m-1 border border-gray-300"
+                        style={{ backgroundImage: `linear-gradient(in srgb to right, ${primaryColor.no_green}, ${primaryColor.color} ${primaryColor.green_quota}, ${primaryColor.full_green})` }}></div>
+                    <div
+                        className="w-28 h-3 m-1 border border-gray-300"
+                        style={{ backgroundImage: `linear-gradient(in srgb to right, ${primaryColor.no_blue}, ${primaryColor.color} ${primaryColor.blue_quota}, ${primaryColor.full_blue})` }}></div>
+                    <p className="text-xs">Set secondary color</p>
+                    <div
+                        className="w-28 h-3 m-1 border border-gray-300"
+                        style={{ backgroundImage: `linear-gradient(in srgb to right, ${secondaryColor.no_red}, ${secondaryColor.color} ${secondaryColor.red_quota}, ${secondaryColor.full_red})` }}></div>
+                    <div
+                        className="w-28 h-3 m-1 border border-gray-300"
+                        style={{ backgroundImage: `linear-gradient(in srgb to right, ${secondaryColor.no_green}, ${secondaryColor.color} ${secondaryColor.green_quota}, ${secondaryColor.full_green})` }}></div>
+                    <div
+                        className="w-28 h-3 m-1 border border-gray-300"
+                        style={{ backgroundImage: `linear-gradient(in srgb to right, ${secondaryColor.no_blue}, ${secondaryColor.color} ${secondaryColor.blue_quota}, ${secondaryColor.full_blue})` }}></div>
                 </div>
             </div>
         </div>
