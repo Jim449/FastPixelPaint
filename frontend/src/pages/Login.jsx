@@ -7,7 +7,7 @@ export default function Login() {
     const navigate = useNavigate();
 
     function toRoot(data) {
-        navigate(`folder/${data.folder}`);
+        navigate(`/folder/${data.folder}`);
     }
 
     return <div className="flex flex-col self-center items-center w-[70%]">

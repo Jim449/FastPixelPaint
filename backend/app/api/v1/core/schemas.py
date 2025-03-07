@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field, ConfigDict, EmailStr
-from typing import List
+from typing import List, Optional
 from datetime import datetime
 
 
@@ -58,10 +58,10 @@ class Image(BaseModel):
 class Palette(BaseModel):
     name: str = Field(min_length=1, max_length=100, default=None,
                       description="Palette name, only required if palette is saved in file system")
-    folder_id: int = Field(
-        default=None, description="Folder, only required if palette is saved in file system")
-    user_id: int = Field(
-        default=None, description="User, not required for universal palettes")
+    folder_id: Optional[int] = Field(
+        default=None, optional=True, description="Folder, only required if palette is saved in file system")
+    user_id: Optional[int] = Field(
+        default=None, optional=True, description="User, not required for universal palettes")
     default_palette: bool = Field(
         default=False, description="Default palette for new paintings")
     universal: bool = Field(

@@ -1,6 +1,6 @@
 import React from "react"
 import { Link, useNavigate } from "react-router"
-// import { authStore } from "src/store/authStore"
+import { authStore } from "src/store/authStore"
 
 export default function Header() {
     // const logout = authStore((state) => state.logout);

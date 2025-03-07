@@ -5,8 +5,14 @@ import PaletteButton from "src/components/PaletteButton";
 import { standardPalette } from "src/scripts/user_setup";
 import { getDot, getLine, getStraightLine, getCircle, getEllipse, fillEllipse, getRectangle, fillRectangle } from "src/scripts/geometry";
 import { Drawing } from "src/scripts/drawing";
+import { authStore } from "src/store/authStore";
+import { useNavigate } from "react-router-dom";
 
 export default function Paint() {
+    const { token } = authStore();
+    const userData = authStore((state) => state.userData);
+    const fetchUser = authStore((state) => state.fetchUser);
+
     const [canvasWidth, setCanvasWidth] = useState(300);
     const [canvasHeight, setCanvasHeight] = useState(300);
     const [coordinates, setCoordinates] = useState([0, 0]);
@@ -15,6 +21,7 @@ export default function Paint() {
     const [tool, setTool] = useState("");
     const [primaryColor, setPrimaryColor] = useState({ color: "#000000", index: -1 });
     const [secondaryColor, setSecondaryColor] = useState({ color: "#ffffff", index: -1 });
+    const [loggedIn, setLoggedIn] = useState((token) ? true : false);
 
     const drawing = useRef(new Drawing(300, 300));
     const canvasRef = useRef();
@@ -23,6 +30,7 @@ export default function Paint() {
     // Had to make this a ref, or it wouldn't update
     const menuOpen = useRef(false);
     const activeTool = useRef({ tool: "", size: 1, color: "#000000", eraser: "#ffffff", red: 0, blue: 0, green: 0, alpha: 255, colorIndex: 0 });
+    const navigate = useNavigate();
 
     let canvasLeftDown = false;
     let canvasRightDown = false;
@@ -46,7 +54,8 @@ export default function Paint() {
         { label: "Switch palette", type: "button", action: () => { } },
         { label: "Open and generate palette", type: "button", action: () => { } },
         { label: "Open with current palette", type: "button", action: () => { } },
-        { label: "Open text editor", type: "button", action: () => { } }
+        { label: "Open text editor", type: "button", action: () => { } },
+        { label: "Close painter", type: "button", action: () => { navigate("/") } }
     ];
 
     const editOptions = [
@@ -73,7 +82,7 @@ export default function Paint() {
         { label: "Save actions", type: "button", action: () => { } }
     ];
 
-    const drawingTools = ["Pencil", "Brush", "Dotter", "Bucket", "Eraser", "Dithering pencil", "Dithering bucket"];
+    const drawingTools = ["Pencil", "Dotter", "Bucket", "Eraser", "Dithering pencil", "Dithering bucket"];
     const geometryTools = ["Line", "Rectangle", "Fill rectangle", "Ellipse", "Fill ellipse"];
 
 
@@ -175,13 +184,13 @@ export default function Paint() {
                 const context = canvasRef.current.getContext("2d");
 
                 if (tool.tool === "Pencil") {
-                    // I can improve performance by drawing in a smaller box
+                    // TODO I can improve performance by drawing in a smaller box
                     drawing.current.addToDrawing(context, overlayRef.current, tool,
                         getLine(lastPoint[0], lastPoint[1],
                             currentPoint[0], currentPoint[1]));
                 }
                 else if (tool.tool === "Dotter") {
-                    // I can improve performance by drawing in a miniscule box
+                    // TODO I can improve performance by drawing in a miniscule box
                     drawing.current.addToDrawing(context, overlayRef.current, tool,
                         getDot(currentPoint[0], currentPoint[1]));
                 }
@@ -280,8 +289,6 @@ export default function Paint() {
         loopId = requestAnimationFrame(drawingLoop);
     }
 
-    // When switching to javascript dom, you'll have to be careful not to manipulate dom
-    // React won't be able to react! But if I don't add/remove children it should be fine
     // Apparently, using useCallback can prevent unnecessary re-renders
     const onMove = useCallback((event) => {
         // Called on mouse movement
@@ -358,6 +365,27 @@ export default function Paint() {
     }, []);
 
 
+    async function get_palette(id) {
+        try {
+            let path = (id === null) ? "http://localhost:8000/default_palette" : `http://localhost:8000/palette${id}`;
+
+            const response = await fetch(path,
+                {
+                    method: "GET",
+                    headers: { Authorization: `Bearer ${token}` },
+                });
+            const data = await response.json();
+
+            if (!response.ok) throw new Error("Error when fetching palette");
+
+            // I should get all the colors and set the state
+            console.log(data);
+            // const codes = [];
+            // data.colors.forEach(element => {});
+        }
+        catch { }
+    }
+
     useEffect(() => {
         // Sets up mouse listeners and main loop
         // Sets up the drawing class
@@ -374,7 +402,12 @@ export default function Paint() {
         docRef.current.addEventListener("mouseup", onRelease);
 
         window.oncontextmenu = (event) => { event.preventDefault() }
+
+        get_palette(null);
+
+        // Not going to need this for much longer
         setPalette(standardPalette());
+
         loopId = requestAnimationFrame(drawingLoop);
 
         drawing.current.setImage(canvasRef);
@@ -437,7 +470,6 @@ export default function Paint() {
             <nav>
                 <ul className="flex flex-row text-xs border-l border-r border-gray-300">
                     <ToolButton name="Pencil" icon={null} selectedTool={tool} onClick={onToolSelect}></ToolButton>
-                    <ToolButton name="Brush" icon={null} selectedTool={tool} onClick={onToolSelect}></ToolButton>
                     <ToolButton name="Dotter" icon={null} selectedTool={tool} onClick={onToolSelect}></ToolButton>
                     <ToolButton name="Bucket" icon={null} selectedTool={tool} onClick={onToolSelect}></ToolButton>
                     <ToolButton name="Eraser" icon={null} selectedTool={tool} onClick={onToolSelect}></ToolButton>
@@ -476,23 +508,24 @@ export default function Paint() {
         </div>
         {/* Needed min-h-full to lower height and enforce scroll */}
         <div className="flex grow min-h-full">
+            {/* Box-sizing and -4 positioning ensures border can be fully covered by canvas */}
             <div className="flex flex-col grow items-center overflow-scroll bg-gray-300">
                 <div className="bg-gray-300 w-[360px] min-h-[60px]"></div>
                 <div
-                    className="relative w-[300px] h-[300px] bg-gray-400">
+                    className="relative w-[300px] h-[300px] bg-gray-300 box-border border-4 border-dashed border-gray-200">
                     <canvas
                         id="canvas"
                         ref={canvasRef}
                         width={canvasWidth}
                         height={canvasHeight}
-                        className="absolute top-0 left-0 w-[300px] h-[300px] z-0">
+                        className="absolute top-[-4px] left-[-4px] w-[300px] h-[300px] z-0">
                     </canvas>
                     <canvas
                         id="overlay"
                         ref={overlayRef}
                         width={canvasWidth}
                         height={canvasHeight}
-                        className="absolute top-0 left-0 w-[300px] h-[300px] z-10">
+                        className="absolute top-[-4px] left-[-4px] w-[300px] h-[300px] z-10">
                     </canvas>
                 </div>
 

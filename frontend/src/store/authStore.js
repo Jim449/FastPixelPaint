@@ -24,16 +24,21 @@ export const authStore = create((set, get) => ({
     fetchUser: async () => {
         const { token, logout, setUserData } = get();
         try {
-            // Write the fetch user
-            const response = await fetch(`${API_URL}/some path`, {
+            const response = await fetch("http://localhost:8000/general/user", {
                 method: "GET",
                 headers: {
-                    Authorization: `Bearer ${token}`
+                    Authorization: `Bearer ${token}`,
+                    "Content-Type": "application/json"
                 }
             });
+            if (response.status === 200) {
+                const userData = await response.json();
+                setUserData(userData);
+            }
+            else if (response.status === 401) {
+                logout();
+            }
         }
-        catch {
-
-        }
+        catch { }
     }
 }));

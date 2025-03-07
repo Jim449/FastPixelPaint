@@ -53,7 +53,7 @@ export default function Registration() {
             const data = await response.json();
 
             if (response.status === 201) {
-                navigate("login")
+                navigate("/login")
             }
             else {
                 setServerError("Registration failed due to unexpected error");

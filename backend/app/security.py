@@ -17,6 +17,8 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="v1/auth/token")
+optional_oauth2 = OAuth2PasswordBearer(
+    tokenUrl="v1/auth/token", auto_error=False)
 
 # Passlib might not work any more. I'm going to try pwdlib with bcrypt
 # pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -86,7 +88,7 @@ def get_current_user(token: Annotated[str, Depends(oauth2_scheme)],
     return user
 
 
-def get_user_or_none(token: Annotated[str, Depends(oauth2_scheme)],
+def get_user_or_none(token: str | None = Depends(optional_oauth2),
                      db: Session = Depends(get_db)):
     if not token:
         return None
