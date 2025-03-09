@@ -1,1 +1,20 @@
 @import "tailwindcss";
+
+.rangeslider {
+    -webkit-appearance: none;
+    appearance: none;
+}
+
+.rangeslider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 2px;
+    height: 10px;
+    background: whitesmoke;
+}
+
+.rangeslider::-moz-range-thumb {
+    width: 2px;
+    height: 10px;
+    background: whitesmoke;
+}

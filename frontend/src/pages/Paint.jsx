@@ -2,12 +2,13 @@ import React, { useState, useEffect, useRef, useCallback } from "react";
 import Menu from "src/components/Menu";
 import ToolButton from "src/components/ToolButton";
 import PaletteButton from "src/components/PaletteButton";
+import ColorPicker from "src/components/ColorPicker";
 import { standardPalette } from "src/scripts/user_setup";
 import { getDot, getLine, getStraightLine, getCircle, getEllipse, fillEllipse, getRectangle, fillRectangle } from "src/scripts/geometry";
 import { Drawing, PaletteColor } from "src/scripts/drawing";
 import { authStore } from "src/store/authStore";
 import { useNavigate } from "react-router-dom";
-import { hexToColor } from "../scripts/drawing";
+import { hexToColor, rgbToHex } from "../scripts/drawing";
 
 export default function Paint() {
     const { token } = authStore();
@@ -20,10 +21,6 @@ export default function Paint() {
     const [palette, setPalette] = useState([]);
     const [menu, setMenu] = useState("");
     const [tool, setTool] = useState("");
-    // const [primaryColor, setPrimaryColor] = useState({ color: "#000000", index: -1, redness: 0, greeness: 0, blueness: 0, no_red: 0, no_green: 0, no_blue: 0, full_red: 0, full_green: 0, full_blue: 0});
-    // const [secondaryColor, setSecondaryColor] = useState({ color: "#ffffff", index: -1 });
-    // Let's try using a class state
-    // Not very reactive perhaps but it shortens things down and performs some color calculations during initialization
     const [primaryColor, setPrimaryColor] = useState(new PaletteColor(0, 0, 0, -1 - 1));
     const [secondaryColor, setSecondaryColor] = useState(new PaletteColor(255, 255, 255, -1 - 1));
     const [loggedIn, setLoggedIn] = useState((token) ? true : false);
@@ -130,6 +127,48 @@ export default function Paint() {
         let green = hexToColor(color, 1);
         let blue = hexToColor(color, 2);
         setSecondaryColor(new PaletteColor(red, green, blue, index, order));
+        activeTool.current.eraser = color;
+    }
+
+    function previewPrimaryColor(red, green, blue) {
+        setPrimaryColor(new PaletteColor(red, green, blue, primaryColor.index, primaryColor.order));
+    }
+
+    function previewSecondaryColor(red, green, blue) {
+        setSecondaryColor(new PaletteColor(red, green, blue, secondaryColor.index, secondaryColor.order));
+    }
+
+    function modifyPrimaryColor(red, green, blue, index, order) {
+        red = Math.max(Math.min(Number(red), 255), 0);
+        green = Math.max(Math.min(Number(green), 255), 0);
+        blue = Math.max(Math.min(Number(blue), 255), 0);
+
+        let newPalette = [...palette];
+        let color = rgbToHex(red, green, blue);
+
+        newPalette[order] = {
+            color: color,
+            index: index,
+            order: order
+        };
+        console.log(newPalette);
+        setPalette(newPalette);
+        activeTool.current.color = color;
+    }
+
+    function modifySecondaryColor(red, green, blue, index, order) {
+        red = Math.max(Math.min(Number(red), 255), 0);
+        green = Math.max(Math.min(Number(green), 255), 0);
+        blue = Math.max(Math.min(Number(blue), 255), 0);
+
+        let newPalette = [...palette];
+        let color = rgbToHex(red, green, blue);
+        newPalette[order] = {
+            color: color,
+            index: index,
+            order: order
+        };
+        setPalette(newPalette);
         activeTool.current.eraser = color;
     }
 
@@ -535,28 +574,16 @@ export default function Paint() {
                         className="size-6 border-2 border-t-gray-800 border-l-gray-800 border-b-gray-300 border-r-gray-300"
                         style={{ background: secondaryColor.color }}></div>
                 </div>
-                <div className="flex flex-col">
-                    <p className="text-xs">Set primary color</p>
-                    <div
-                        className="w-28 h-3 m-1 border border-gray-300"
-                        style={{ backgroundImage: `linear-gradient(in srgb to right, ${primaryColor.no_red}, ${primaryColor.color} ${primaryColor.red_quota}, ${primaryColor.full_red})` }}></div>
-                    <div
-                        className="w-28 h-3 m-1 border border-gray-300"
-                        style={{ backgroundImage: `linear-gradient(in srgb to right, ${primaryColor.no_green}, ${primaryColor.color} ${primaryColor.green_quota}, ${primaryColor.full_green})` }}></div>
-                    <div
-                        className="w-28 h-3 m-1 border border-gray-300"
-                        style={{ backgroundImage: `linear-gradient(in srgb to right, ${primaryColor.no_blue}, ${primaryColor.color} ${primaryColor.blue_quota}, ${primaryColor.full_blue})` }}></div>
-                    <p className="text-xs">Set secondary color</p>
-                    <div
-                        className="w-28 h-3 m-1 border border-gray-300"
-                        style={{ backgroundImage: `linear-gradient(in srgb to right, ${secondaryColor.no_red}, ${secondaryColor.color} ${secondaryColor.red_quota}, ${secondaryColor.full_red})` }}></div>
-                    <div
-                        className="w-28 h-3 m-1 border border-gray-300"
-                        style={{ backgroundImage: `linear-gradient(in srgb to right, ${secondaryColor.no_green}, ${secondaryColor.color} ${secondaryColor.green_quota}, ${secondaryColor.full_green})` }}></div>
-                    <div
-                        className="w-28 h-3 m-1 border border-gray-300"
-                        style={{ backgroundImage: `linear-gradient(in srgb to right, ${secondaryColor.no_blue}, ${secondaryColor.color} ${secondaryColor.blue_quota}, ${secondaryColor.full_blue})` }}></div>
-                </div>
+                <ColorPicker
+                    color={primaryColor}
+                    previewColor={previewPrimaryColor}
+                    setColor={modifyPrimaryColor}
+                    colorType="primary"></ColorPicker>
+                <ColorPicker
+                    color={secondaryColor}
+                    previewColor={previewSecondaryColor}
+                    setColor={modifySecondaryColor}
+                    colorType="secondary"></ColorPicker>
             </div>
         </div>
         <div className="flex flex-row-reverse text-xs border-t border-t-gray-300">
