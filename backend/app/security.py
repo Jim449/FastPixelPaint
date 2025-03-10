@@ -16,9 +16,9 @@ from pydantic import ValidationError
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="v1/auth/token")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="v1/auth/login")
 optional_oauth2 = OAuth2PasswordBearer(
-    tokenUrl="v1/auth/token", auto_error=False)
+    tokenUrl="v1/auth/login", auto_error=False)
 
 # Passlib might not work any more. I'm going to try pwdlib with bcrypt
 # pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")

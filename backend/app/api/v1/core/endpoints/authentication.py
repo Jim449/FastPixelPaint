@@ -23,7 +23,7 @@ def register_user(user: schemas.UserRegister, db: Session = Depends(get_db)) -> 
         **user.model_dump(exclude={"password"}), password_hash=password_hash
     )
     root_folder = model.Folder(
-        name="Home", path="Home", user=new_user, root=True)
+        name="Home", path=f"{user.email}/Home", user=new_user, root=True)
 
     db.add_all([new_user, root_folder])
     db.commit()

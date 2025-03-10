@@ -10,6 +10,7 @@ export default function LoginForm({ onLogin }) {
     const [passwordError, setPasswordError] = useState("");
     const [serverError, setServerError] = useState("");
     const { setToken } = authStore();
+    const { setRoot } = authStore();
 
 
     function validateEmail() {
@@ -49,6 +50,7 @@ export default function LoginForm({ onLogin }) {
             if (response.status === 200) {
                 const data = await response.json();
                 setToken(data.access_token);
+                setRoot(data.root);
                 onLogin(data);
             }
             else if (response.status === 401) {

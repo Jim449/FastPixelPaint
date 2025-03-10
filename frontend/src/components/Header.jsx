@@ -25,6 +25,8 @@ export default function Header() {
                     className="cursor-pointer hover:bg-gray-200 pt-1 pb-2 px-3">Home</Link></li>
                 <li><Link to="paint"
                     className="cursor-pointer hover:bg-gray-200 pt-1 pb-2 px-3">Paint</Link></li>
+                <li><Link to="files"
+                    className="cursor-pointer hover:bg-gray-200 pt-1 pb-2 px-3">Files</Link></li>
                 <li><Link to="about"
                     className="cursor-pointer hover:bg-gray-200 pt-1 pb-2 px-3">About</Link></li>
             </ul>

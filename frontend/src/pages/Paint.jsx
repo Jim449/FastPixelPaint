@@ -3,12 +3,13 @@ import Menu from "src/components/Menu";
 import ToolButton from "src/components/ToolButton";
 import PaletteButton from "src/components/PaletteButton";
 import ColorPicker from "src/components/ColorPicker";
+import MessageWindow from "src/components/MessageWindow";
 import { standardPalette } from "src/scripts/user_setup";
 import { getDot, getLine, getStraightLine, getCircle, getEllipse, fillEllipse, getRectangle, fillRectangle } from "src/scripts/geometry";
 import { Drawing, PaletteColor } from "src/scripts/drawing";
 import { authStore } from "src/store/authStore";
 import { useNavigate } from "react-router-dom";
-import { hexToColor, rgbToHex } from "../scripts/drawing";
+import { hexToColor, rgbToHex, getPalette, savePalette, createPalette, Palette } from "../scripts/drawing";
 
 export default function Paint() {
     const { token } = authStore();
@@ -20,11 +21,13 @@ export default function Paint() {
     const [coordinates, setCoordinates] = useState([0, 0]);
     const [palette, setPalette] = useState([]);
     const [menu, setMenu] = useState("");
+    const [message, setMessage] = useState("");
     const [tool, setTool] = useState("");
     const [primaryColor, setPrimaryColor] = useState(new PaletteColor(0, 0, 0, -1 - 1));
     const [secondaryColor, setSecondaryColor] = useState(new PaletteColor(255, 255, 255, -1 - 1));
     const [loggedIn, setLoggedIn] = useState((token) ? true : false);
 
+    const paletteObject = {};
     const drawing = useRef(new Drawing(300, 300));
     const canvasRef = useRef();
     const overlayRef = useRef();
@@ -41,7 +44,7 @@ export default function Paint() {
     let lastPoint = [0, 0];
     let currentPoint = [0, 0];
     let loopId;
-    let menuLabels = ["File", "Edit", "View", "Settings"];
+    let menuLabels = ["File", "Edit", "View", "Palette", "Settings"];
 
     const fileOptions = [
         { label: "New", type: "button", action: () => { } },
@@ -51,9 +54,6 @@ export default function Paint() {
         { label: "Save as...", type: "button", action: () => { } },
         { label: "Export", type: "button", action: downloadImage },
         { label: "Export as...", type: "button", action: () => { } },
-        { label: "Save palette", type: "button", action: () => { } },
-        { label: "Save palette as...", type: "button", action: () => { } },
-        { label: "Switch palette", type: "button", action: () => { } },
         { label: "Open and generate palette", type: "button", action: () => { } },
         { label: "Open with current palette", type: "button", action: () => { } },
         { label: "Open text editor", type: "button", action: () => { } },
@@ -75,8 +75,41 @@ export default function Paint() {
         { label: "Revert zoom", type: "button", action: () => { } },
         { label: "Toggle grid", type: "button", action: () => { } },
         { label: "Set grid size", type: "button", action: () => { } },
-        { label: "Snap to grid", type: "button", action: () => { } },
-        { label: "Toggle transparency", type: "button", action: () => { } }
+        { label: "Snap to grid", type: "button", action: () => { } }
+    ];
+
+    const paletteOptions = [
+        {
+            label: "Save palette", type: "button", action: () => {
+                if (paletteObject.universal) {
+                    setMessage("Please use the 'save palette as...' option.");
+                }
+                else if (savePalette(paletteObject, token)) {
+                    setMessage("Palette saved successfully.");
+                }
+                else {
+                    setMessage("There was an unexpected error when attempting to save the palette.");
+                }
+            }
+        },
+        { label: "Save palette as...", type: "button", action: () => { } },
+        { label: "Switch palette", type: "button", action: () => { } },
+        {
+            label: "Select as default", type: "button", action: () => {
+                if (!paletteObject.universal) {
+                    setMessage("Cannot modify a universal palette. Please save a personal copy of the palette.");
+                }
+                else if (paletteObject.default_palette || savePalette(paletteObject, token)) {
+                    setMessage("Palette is set as default");
+                }
+                else {
+                    setMessage("Failed to set palette as default due to unexpected error.")
+                }
+            }
+        },
+        { label: "Resize to 4x4", type: "button", action: () => { } },
+        { label: "Resize to 8x8", type: "button", action: () => { } },
+        { label: "Resize to 16x16", type: "button", action: () => { } }
     ];
 
     const settingsOptions = [
@@ -89,6 +122,7 @@ export default function Paint() {
 
 
     function downloadImage(event) {
+        // Downloads canvas image as a png
         let url = canvasRef.current.toDataURL("image/png");
         let a = docRef.current.createElement("a");
         a.href = url;
@@ -109,11 +143,13 @@ export default function Paint() {
     }
 
     function onToolSelect(event) {
+        // Sets active drawing tool
         setTool(event.target.id);
         activeTool.current.tool = event.target.id;
     }
 
     function onPaletteClick(event, index, order, color) {
+        // Sets primary color to equal a palette color
         let red = hexToColor(color, 0);
         let green = hexToColor(color, 1);
         let blue = hexToColor(color, 2);
@@ -123,6 +159,7 @@ export default function Paint() {
     }
 
     function onPaletteRightClick(event, index, order, color) {
+        // Sets secondary color to equal a palette color
         let red = hexToColor(color, 0);
         let green = hexToColor(color, 1);
         let blue = hexToColor(color, 2);
@@ -131,14 +168,23 @@ export default function Paint() {
     }
 
     function previewPrimaryColor(red, green, blue) {
+        // Changes the primary color
+        // Applies to primary color display and color picker
+        // Does not apply to palette, image or drawings
         setPrimaryColor(new PaletteColor(red, green, blue, primaryColor.index, primaryColor.order));
     }
 
     function previewSecondaryColor(red, green, blue) {
+        // Changes the secondary color
+        // Applies to secondary color display and color picker
+        // Does not apply to palette, image or drawings
         setSecondaryColor(new PaletteColor(red, green, blue, secondaryColor.index, secondaryColor.order));
     }
 
     function modifyPrimaryColor(red, green, blue, index, order) {
+        // Changes the primary color
+        // Applies to palette and drawings
+        // TODO: should change colors in the image
         red = Math.max(Math.min(Number(red), 255), 0);
         green = Math.max(Math.min(Number(green), 255), 0);
         blue = Math.max(Math.min(Number(blue), 255), 0);
@@ -157,6 +203,9 @@ export default function Paint() {
     }
 
     function modifySecondaryColor(red, green, blue, index, order) {
+        // Changes the secondary color
+        // Applies to palette and drawings
+        // TODO: should change colors in the image
         red = Math.max(Math.min(Number(red), 255), 0);
         green = Math.max(Math.min(Number(green), 255), 0);
         blue = Math.max(Math.min(Number(blue), 255), 0);
@@ -173,27 +222,28 @@ export default function Paint() {
     }
 
     function getStart(x1, x2) {
-        // Use on x, y to get the upper left corner
+        // Returns the minimum of two x or y coordinates
         return Math.min(x1, x2);
     }
 
     function getLineStart(x1, x2) {
-        // Use on x, y to get the starting line coordinates
+        // Returns a starting line coordinate with respect to either x or y
         // Assumes drawing is done in a box with top left corner 0,0
         if (x2 > x1) return 0;
         else return x1 - x2;
     }
 
     function getLineEnd(x1, x2) {
-        // Use on x, y to get the ending line coordinates
+        // Returns a starting line coordinate with respect to either x or y
         // Assumes drawing is done in a box with top left corner 0,0
         if (x2 > x1) return x2 - x1;
         else return 0;
     }
 
     function getSquareStart(x1, x2, distance) {
-        // Gets a coordinate from which to draw a square or circle
-        // inside a potential non-square area
+        // Gets a starting coordinate with respect to either x or y,
+        // from which to draw a square or circle with side equal to distance.
+        // The coordinates doesn't have to describe a square area
         if (x2 > x1) return x1;
         else return x1 - distance;
     }
@@ -396,40 +446,24 @@ export default function Paint() {
     }, []);
 
 
-    async function get_palette(id) {
-        // Returns a palette with a specific id or the users default palette 
-        try {
-            let path = (id === null) ? "http://localhost:8000/default_palette" : `http://localhost:8000/palette${id}`;
-
-            const response = await fetch(path,
-                {
-                    method: "GET",
-                    headers: { Authorization: `Bearer ${token}` },
-                });
-            const data = await response.json();
-
-            if (!response.ok) throw new Error("Error when fetching palette");
-
-            const codes = data.colors.map((item) => {
-                rgbToHex(item.red, item.green, item.blue);
-            });
-            setPalette(codes);
-        }
-        catch { }
-    }
-
     useEffect(() => {
         // Sets up mouse listeners and main loop
         // Sets up the drawing class
-
         docRef.current.addEventListener("mousemove", onMove);
         docRef.current.addEventListener("mousedown", onDown);
         docRef.current.addEventListener("mouseup", onRelease);
 
         window.oncontextmenu = (event) => { event.preventDefault() }
 
-        // get_palette(null);
-        setPalette(standardPalette);
+        // Had to do async or I'd just get a promise
+        const fetchPalette = async () => {
+            let paletteObject = await getPalette(null, token);
+            setPalette(paletteObject.getColors());
+        }
+        fetchPalette();
+
+        // You can get a default palette user_setup but I proabably won't need it anymore
+        // setPalette(standardPalette);
 
         loopId = requestAnimationFrame(drawingLoop);
 
@@ -442,9 +476,10 @@ export default function Paint() {
             docRef.current.removeEventListener("mouseup", onRelease);
             cancelAnimationFrame(loopId);
         }
-    }, [])
+    }, []);
 
     return <div className="flex flex-col min-h-screen max-h-screen bg-gray-50">
+        {message && <MessageWindow action={(event) => { console.log("Clicked!"); setMessage(""); }}>{message}</MessageWindow>}
         <div className="flex rounded-b-lg border-b border-b-gray-300">
             <nav>
                 <ul className="flex text-sm ml-3 mt-1">
@@ -472,6 +507,14 @@ export default function Paint() {
                             className="hover:bg-gray-200 pt-1 pb-2 px-3">View
                         </button>
                         {menu == "View" && <Menu options={viewOptions}></Menu>}
+                    </li>
+                    <li className="relative">
+                        <button
+                            id="Palette"
+                            onClick={onMenuOpen}
+                            className="hover:bg-gray-200 pt-1 pb-2 px-3">Palette
+                        </button>
+                        {menu == "Palette" && <Menu options={paletteOptions}></Menu>}
                     </li>
                     <li className="relative">
                         <button

@@ -21,13 +21,104 @@ export function hexToColor(code, colorType) {
     return parseInt(hex, 16);
 }
 
-export class Palette {
-    constructor() {
 
+export async function getPalette(id, token) {
+    // Returns a palette with a specific id or the users default palette 
+    try {
+        let path = (id === null) ? "http://localhost:8000/v1/default_palette" : `http://localhost:8000/v1/palette/${id}`;
+
+        const response = await fetch(path,
+            {
+                method: "GET",
+                headers: { Authorization: `Bearer ${token}` },
+            });
+        const data = await response.json();
+
+        if (!response.ok) throw new Error("Error when fetching palette");
+
+        let palette = new Palette(data);
+        return palette;
+    }
+    catch {
+        return false;
     }
 }
 
+
+export async function savePalette(palette, token) {
+    // Saves the current palette. Requires a list of colors
+    // {red, green, blue, index, order}
+    try {
+        let path = `http://localhost:8000/v1/palette/${id}`;
+
+        const response = await fetch(path,
+            {
+                method: "PUT",
+                headers: {
+                    "Authorization": `Bearer ${token}`,
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify(palette)
+            });
+        const data = await response.json();
+
+        if (!response.ok) throw new Error("Error when saving palette");
+
+        return data;
+    }
+    catch {
+        return false;
+    }
+}
+
+
+export async function createPalette(palette, token) {
+    // Saves the current palette as a new palette
+    try {
+        let path = `http://localhost:8000/v1/palette`;
+
+        const response = await fetch(path,
+            {
+                method: "POST",
+                headers: {
+                    "Authorization": `Bearer ${token}`,
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify(palette)
+            });
+        const data = await response.json();
+
+        if (!response.ok) throw new Error("Error when saving palette");
+
+        return data;
+    }
+    catch { }
+}
+
+
+export class Palette {
+    constructor(palette) {
+        this.id = palette.id;
+        this.name = palette.name;
+        this.folder_id = palette.folder_id;
+        this.default_palette = palette.default_palette;
+        this.universal = palette.universal;
+        this.colors = palette.colors;
+    }
+
+    getColors() {
+        return this.colors.map((item) => ({
+            index: item.index,
+            order: item.order,
+            color: rgbToHex(item.red, item.green, item.blue)
+        }));
+    }
+}
+
+
 export class PaletteColor {
+    // Describes a color. Required to create color pickers
+    // Colors in the palette can be described with simpler objects 
     constructor(red, green, blue, index, order) {
         this.red = red;
         this.green = green;

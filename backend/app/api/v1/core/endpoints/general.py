@@ -112,3 +112,17 @@ def get_folder(id: int, user=Depends(get_current_user),
         "images": images,
         "palettes": palettes
     }
+
+
+@router.post("/folder/{name}", status_code=status.HTTP_201_CREATED)
+def create_folder(name: str, parent: schema.Folder, user=Depends(get_current_user),
+                  db: Session = Depends(get_db)):
+    if user.id != parent.user_id:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,
+                            detail="User has no access to parent folder")
+    db.begin()
+    folder = model.Folder(user_id=user.id, parent_id=parent.id,
+                          name=name, path=f"{parent.path}/{name}")
+    db.add(folder)
+    db.commit()
+    return folder

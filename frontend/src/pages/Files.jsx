@@ -1,5 +1,6 @@
 import React from "react"
+import FileSystem from "src/components/FileSystem"
 
 export default function Files() {
-    return <div></div>
+    return <FileSystem></FileSystem>
 }

@@ -2,9 +2,11 @@ import { create } from "zustand"
 
 const loadInitialState = () => {
     const token = localStorage.getItem("token") || null;
+    const folderId = localStorage.getItem("folderId") || null;
+    const rootId = localStorage.getItem("rootId") || null;
     const userData = JSON.parse(localStorage.getItem("userData")) || null;
 
-    return { token: token, userData };
+    return { token: token, folderId: folderId, rootId: rootId, userData };
 };
 
 export const authStore = create((set, get) => ({
@@ -12,6 +14,15 @@ export const authStore = create((set, get) => ({
     setToken: (token) => {
         localStorage.setItem("token", token);
         set(() => ({ token: token }));
+    },
+    setFolder: (folder) => {
+        localStorage.setItem("folderId", folder);
+        set(() => ({ folderId: folder }));
+    },
+    setRoot: (root) => {
+        localStorage.setItem("folderId", root);
+        localStorage.setItem("rootId", root);
+        set(() => ({ folderId: root, rootId: root }));
     },
     logout: (set) => {
         localStorage.removeItem("token");
