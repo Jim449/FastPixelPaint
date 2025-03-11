@@ -39,6 +39,30 @@ export default function FileSystem({ saveMode, onSave, onCancel }) {
         }
     }
 
+    async function searchFolder(token, path) {
+        // Opens the folder with the given path
+        let url = `http://localhost:8000/v1/path/${path}`;
+
+        try {
+            const response = await fetch(url, {
+                method: "GET",
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            if (response.status === 200) {
+                const data = await response.json();
+                setActiveFolder(data.current_folder);
+                setFolders(data.folders);
+                setImages(data.images);
+                setPalettes(data.palettes);
+                setCurrentFolder(data.current_folder.id);
+                setPathList(data.current_folder.path);
+            }
+        }
+        catch (error) {
+            console.log(error);
+        }
+    }
+
     function setPathList(path) {
         // Splits a path into an array of folders, containing paths and names
 
@@ -60,13 +84,11 @@ export default function FileSystem({ saveMode, onSave, onCancel }) {
     }
 
     function handleSave(event) {
-        let name = event.target.value;
-
-        if (name.contains("/")) {
-            setSaveError("Invalid save name.");
+        if (saveName.includes("/")) {
+            setSaveError("Invalid file name. Ensure name doesn't include any '/'");
         }
         else {
-            onSave(name, activeFolder);
+            onSave(saveName, activeFolder);
         }
     }
 
@@ -112,7 +134,8 @@ export default function FileSystem({ saveMode, onSave, onCancel }) {
         {path && <div className="ml-2 mb-4">
             {path.map((item) =>
                 <span className="text-sm" key={item.path}> / <button
-                    className="underline hover:text-blue-600 cursor-pointer">{item.name}
+                    className="underline hover:text-blue-600 cursor-pointer"
+                    onClick={(event) => searchFolder(token, item.path)}>{item.name}
                 </button></span>)}
         </div>}
         <div className="flex">
@@ -138,8 +161,17 @@ export default function FileSystem({ saveMode, onSave, onCancel }) {
                 </tr>
             </thead>
             <tbody>
+                {!activeFolder.root && <tr
+                    className="flex border-b-1 border-gray-200 active:bg-blue-100"
+                    onDoubleClick={(event) => openFolder(token, activeFolder.parent_id)}>
+                    <td className="m-2 w-20">Folder</td>
+                    <td className="m-2 w-48 overflow-ellipsis">[Go up]</td>
+                    <td className="m-2 w-20"></td>
+                    <td className="m-2 w-20"></td>
+                </tr>}
                 {folders.map((item) => <tr
-                    className="flex border-b-1 border-gray-200 focus:bg-white"
+                    className="flex border-b-1 border-gray-200 active:bg-blue-100"
+                    onDoubleClick={(event) => openFolder(token, item.id)}
                     key={"row-" + item.path}>
                     <td className="m-2 w-20">Folder</td>
                     <td className="m-2 w-48 overflow-ellipsis">{item.name}</td>
@@ -147,7 +179,7 @@ export default function FileSystem({ saveMode, onSave, onCancel }) {
                     <td className="m-2 w-20"></td>
                 </tr>)}
                 {images.map((item) => <tr
-                    className="flex gap-10 border-b-1 border-gray-200 focus:bg-white"
+                    className="flex gap-10 border-b-1 border-gray-200 active:bg-blue-100"
                     key={"image-" + item.name}>
                     <td className="m-2 w-20">Image</td>
                     <td className="m-2 w-48 overflow-ellipsis">{item.name}</td>
@@ -155,7 +187,7 @@ export default function FileSystem({ saveMode, onSave, onCancel }) {
                     <td className="m-2 w-20">{item.updated}</td>
                 </tr>)}
                 {palettes.map((item) => <tr
-                    className="flex gap-10 border-b-1 border-gray-200 focus:bg-white"
+                    className="flex gap-10 border-b-1 border-gray-200 active:bg-blue-100"
                     key={"palette-" + item.name}>
                     <td className="m-2 w-20">Palette</td>
                     <td className="m-2 w-48 overflow-ellipsis">{item.name}</td>
@@ -166,7 +198,7 @@ export default function FileSystem({ saveMode, onSave, onCancel }) {
         </table>
         {saveMode && <div className="flex">
             <input
-                className="grow"
+                className="grow m-2 pl-2"
                 type="text"
                 placeholder="Enter save name"
                 onChange={(event) => setSaveName(event.target.value)}>
@@ -178,6 +210,6 @@ export default function FileSystem({ saveMode, onSave, onCancel }) {
                 className="m-2 px-2 py-1 bg-gray-100 border border-gray-300 cursor-pointer"
                 onClick={onCancel}>Cancel</button>
         </div>}
-        {saveError && <p className="text-xs text-red-800">{saveError}</p>}
+        {saveError && <p className="ml-2 text-xs text-red-800">{saveError}</p>}
     </div>
 }

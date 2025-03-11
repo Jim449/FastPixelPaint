@@ -142,6 +142,31 @@ def get_root(user=Depends(get_current_user),
     }
 
 
+@router.get("/path/{pathname}", status_code=status.HTTP_200_OK)
+def get_path(pathname: str, user=Depends(get_current_user),
+             db: Session = Depends(get_db)):
+    current_folder = db.execute(
+        select(model.Folder).where(model.Folder.path == pathname)).scalars().first()
+
+    if not current_folder or current_folder.user_id != user.id:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,
+                            detail="Folder doesn't exist or is not accessible by current user")
+
+    folders = db.execute(
+        select(model.Folder).where(model.Folder.parent_id == current_folder.id)).scalars().all()
+    images = db.execute(
+        select(model.Image).where(model.Image.folder_id == current_folder.id)).scalars().all()
+    palettes = db.execute(
+        select(model.Palette).where(model.Palette.folder_id == current_folder.id)).scalars().all()
+
+    return {
+        "current_folder": current_folder,
+        "folders": folders,
+        "images": images,
+        "palettes": palettes
+    }
+
+
 @router.post("/folder/{name}", status_code=status.HTTP_201_CREATED)
 def create_folder(name: str, parent: schema.Folder, user=Depends(get_current_user),
                   db: Session = Depends(get_db)):
