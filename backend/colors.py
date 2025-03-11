@@ -178,10 +178,10 @@ if __name__ == "__main__":
     db_gen: Session = get_db()
     db = next(db_gen)
     dark_colors = model.Palette(
-        name="Dark palette", universal=True, colors=dark_palette())
+        name="Dark palette", universal=True, default_palette=False, colors=dark_palette())
     bright_colors = model.Palette(
-        name="Bright palette", universal=True, colors=bright_palette())
+        name="Bright palette", universal=True, default_palette=True, colors=bright_palette())
     standard_colors = model.Palette(
-        name="Standard palette", universal=True, default_palette=True, colors=standard_palette())
+        name="Standard palette", universal=True, default_palette=False, colors=standard_palette())
     db.add_all([dark_colors, bright_colors, standard_colors])
     db.commit()

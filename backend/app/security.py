@@ -10,7 +10,6 @@ from app.db_setup import get_db
 from app.settings import settings
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
-# from passlib.context import CryptContext
 from pwdlib.hashers.bcrypt import BcryptHasher
 from pydantic import ValidationError
 from sqlalchemy import select
@@ -19,11 +18,7 @@ from sqlalchemy.orm import Session
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="v1/auth/login")
 optional_oauth2 = OAuth2PasswordBearer(
     tokenUrl="v1/auth/login", auto_error=False)
-
-# Passlib might not work any more. I'm going to try pwdlib with bcrypt
-# pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 password_hash = BcryptHasher()
-
 DEFAULT_ENTROPY = 32  # number of bytes to return by default
 _sysrand = SystemRandom()
 

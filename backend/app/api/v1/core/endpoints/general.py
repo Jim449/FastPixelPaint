@@ -114,13 +114,41 @@ def get_folder(id: int, user=Depends(get_current_user),
     }
 
 
+@router.post("/root", status_code=status.HTTP_200_OK)
+def get_root(user=Depends(get_current_user),
+             db: Session = Depends(get_db)):
+
+    root = db.execute(
+        select(model.Folder)
+        .where(model.Folder.user_id == user.id)
+        .where(model.Folder.root)).scalars().first()
+
+    if not root:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
+                            detail="Folder doesn't exist")
+
+    folders = db.execute(
+        select(model.Folder).where(model.Folder.parent_id == root.id)).scalars().all()
+    images = db.execute(
+        select(model.Image).where(model.Image.folder_id == root.id)).scalars().all()
+    palettes = db.execute(
+        select(model.Palette).where(model.Palette.folder_id == root.id)).scalars().all()
+
+    return {
+        "current_folder": root,
+        "folders": folders,
+        "images": images,
+        "palettes": palettes
+    }
+
+
 @router.post("/folder/{name}", status_code=status.HTTP_201_CREATED)
 def create_folder(name: str, parent: schema.Folder, user=Depends(get_current_user),
                   db: Session = Depends(get_db)):
     if user.id != parent.user_id:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,
                             detail="User has no access to parent folder")
-    db.begin()
+
     folder = model.Folder(user_id=user.id, parent_id=parent.id,
                           name=name, path=f"{parent.path}/{name}")
     db.add(folder)

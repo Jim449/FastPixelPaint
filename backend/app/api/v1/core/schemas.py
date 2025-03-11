@@ -29,12 +29,15 @@ class UserOut(BaseModel):
 
 
 class Folder(BaseModel):
+    # Needed id since I'm passing the parent folder to create_folder
+    id: int = Field(unique=True)
     name: str = Field(min_length=1, max_length=100,
                       description="Folder name. Should be unique in its folder")
     path: str = Field(min_length=1, max_length=200, unique=True,
                       description="Full path starting with user email, must be unique")
     user_id: int = Field(description="Owner of folder")
-    parent_id: int = Field(description="Parent folder")
+    parent_id: Optional[int] = Field(
+        description="Parent folder", optional=True)
     model_config = ConfigDict(from_attributes=True)
 
 
