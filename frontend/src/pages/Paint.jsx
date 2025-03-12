@@ -26,6 +26,7 @@ export default function Paint() {
     const [primaryColor, setPrimaryColor] = useState(new PaletteColor(0, 0, 0, -1 - 1));
     const [secondaryColor, setSecondaryColor] = useState(new PaletteColor(255, 255, 255, -1 - 1));
     const [loggedIn, setLoggedIn] = useState((token) ? true : false);
+    const [file, setFile] = useState(null);
 
     const paletteObject = {};
     const drawing = useRef(new Drawing(300, 300));
@@ -479,7 +480,15 @@ export default function Paint() {
     }, []);
 
     return <div className="flex flex-col min-h-screen max-h-screen bg-gray-50">
-        {message && <MessageWindow action={(event) => { console.log("Clicked!"); setMessage(""); }}>{message}</MessageWindow>}
+        {message && <MessageWindow action={(event) => setMessage("")}>{message}</MessageWindow>}
+        {file && <div className="absolute z-30 h-80 w-80 top-[50%] left-[50%] translate-[-50%]">
+            <FileSystem
+                mode={file.mode}
+                action={file.action}
+                onCancel={() => setFile(null)}>
+            </FileSystem>
+        </div>
+        }
         <div className="flex rounded-b-lg border-b border-b-gray-300">
             <nav>
                 <ul className="flex text-sm ml-3 mt-1">

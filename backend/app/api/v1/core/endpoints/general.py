@@ -101,6 +101,8 @@ def get_folder(id: int, user=Depends(get_current_user),
 
     folders = db.execute(
         select(model.Folder).where(model.Folder.parent_id == id)).scalars().all()
+    parent = db.execute(
+        select(model.Folder).where(model.Folder.id == current_folder.parent_id)).scalars().first()
     images = db.execute(
         select(model.Image).where(model.Image.folder_id == id)).scalars().all()
     palettes = db.execute(
@@ -108,6 +110,7 @@ def get_folder(id: int, user=Depends(get_current_user),
 
     return {
         "current_folder": current_folder,
+        "parent_folder": parent,
         "folders": folders,
         "images": images,
         "palettes": palettes
@@ -136,6 +139,7 @@ def get_root(user=Depends(get_current_user),
 
     return {
         "current_folder": root,
+        "parent_folder": None,
         "folders": folders,
         "images": images,
         "palettes": palettes
@@ -154,6 +158,8 @@ def get_path(pathname: str, user=Depends(get_current_user),
 
     folders = db.execute(
         select(model.Folder).where(model.Folder.parent_id == current_folder.id)).scalars().all()
+    parent = db.execute(
+        select(model.Folder).where(model.Folder.id == current_folder.parent_id)).scalars().first()
     images = db.execute(
         select(model.Image).where(model.Image.folder_id == current_folder.id)).scalars().all()
     palettes = db.execute(
@@ -161,6 +167,7 @@ def get_path(pathname: str, user=Depends(get_current_user),
 
     return {
         "current_folder": current_folder,
+        "parent_folder": parent,
         "folders": folders,
         "images": images,
         "palettes": palettes

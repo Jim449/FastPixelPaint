@@ -8,5 +8,5 @@ export default function Files() {
         console.log(folder);
     }
     // Don't need to save here but do test it out
-    return <FileSystem saveMode={true} onSave={testSave} onCancel={null}></FileSystem>
+    return <FileSystem mode={"Save"} action={testSave} onCancel={null}></FileSystem>
 }
