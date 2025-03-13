@@ -35,7 +35,10 @@ export default function Paint() {
     const docRef = useRef(document);
     // Had to make this a ref, or it wouldn't update
     const menuOpen = useRef(false);
-    const activeTool = useRef({ tool: "", size: 1, color: "#000000", eraser: "#ffffff", red: 0, blue: 0, green: 0, alpha: 255, colorIndex: 0 });
+    // This too
+    const activeTool = useRef({ tool: "", size: 1, color: "#000000", red: 0, blue: 0, green: 0, alpha: 255, colorIndex: 0 });
+    const primaryCRef = useRef({});
+    const secondaryCRef = useRef({});
     const navigate = useNavigate();
 
     let canvasLeftDown = false;
@@ -154,9 +157,14 @@ export default function Paint() {
         let red = hexToColor(color, 0);
         let green = hexToColor(color, 1);
         let blue = hexToColor(color, 2);
-        setPrimaryColor(new PaletteColor(red, green, blue, index, order));
-        activeTool.current.color = color;
-        activeTool.current.colorIndex = index;
+        let pColor = new PaletteColor(red, green, blue, index, order);
+        setPrimaryColor(pColor);
+        primaryCRef.current = pColor;
+        // With this commented out, it doesn't work
+        // But I don't want to set the color here
+        // I want to set it in onDown
+        // activeTool.current.color = color;
+        // activeTool.current.colorIndex = index;
     }
 
     function onPaletteRightClick(event, index, order, color) {
@@ -164,22 +172,29 @@ export default function Paint() {
         let red = hexToColor(color, 0);
         let green = hexToColor(color, 1);
         let blue = hexToColor(color, 2);
-        setSecondaryColor(new PaletteColor(red, green, blue, index, order));
-        activeTool.current.eraser = color;
+        let pColor = new PaletteColor(red, green, blue, index, order);
+        setSecondaryColor(pColor);
+        secondaryCRef.current = pColor;
+        // activeTool.current.color = color;
+        // activeTool.current.colorIndex = index;
     }
 
     function previewPrimaryColor(red, green, blue) {
         // Changes the primary color
         // Applies to primary color display and color picker
         // Does not apply to palette, image or drawings
-        setPrimaryColor(new PaletteColor(red, green, blue, primaryColor.index, primaryColor.order));
+        let color = new PaletteColor(red, green, blue, primaryColor.index, primaryColor.order);
+        setPrimaryColor(color);
+        primaryCRef.current = color;
     }
 
     function previewSecondaryColor(red, green, blue) {
         // Changes the secondary color
         // Applies to secondary color display and color picker
         // Does not apply to palette, image or drawings
-        setSecondaryColor(new PaletteColor(red, green, blue, secondaryColor.index, secondaryColor.order));
+        let color = new PaletteColor(red, green, blue, secondaryColor.index, secondaryColor.order);
+        setSecondaryColor(color);
+        secondaryCRef.current = color;
     }
 
     function modifyPrimaryColor(red, green, blue, index, order) {
@@ -198,9 +213,9 @@ export default function Paint() {
             index: index,
             order: order
         };
-        console.log(newPalette);
         setPalette(newPalette);
-        activeTool.current.color = color;
+
+        if (activeTool.current.colorIndex === index) activeTool.current.color = color;
     }
 
     function modifySecondaryColor(red, green, blue, index, order) {
@@ -219,7 +234,8 @@ export default function Paint() {
             order: order
         };
         setPalette(newPalette);
-        activeTool.current.eraser = color;
+
+        if (activeTool.current.colorIndex === index) activeTool.current.color = color;
     }
 
     function getStart(x1, x2) {
@@ -260,33 +276,32 @@ export default function Paint() {
     function drawingLoop(time) {
         // A drawing loop, called at 60 FPS or so
         if (canvasLeftDown || canvasRightDown) {
-            let tool = activeTool.current;
 
-            if (drawingTools.includes(tool.tool)) {
+            if (drawingTools.includes(activeTool.current.tool)) {
                 const context = canvasRef.current.getContext("2d");
 
-                if (tool.tool === "Pencil") {
+                if (activeTool.current.tool === "Pencil") {
                     // TODO I can improve performance by drawing in a smaller box
-                    drawing.current.addToDrawing(context, overlayRef.current, tool,
+                    drawing.current.addToDrawing(context, overlayRef.current, activeTool.current,
                         getLine(lastPoint[0], lastPoint[1],
                             currentPoint[0], currentPoint[1]));
                 }
-                else if (tool.tool === "Dotter") {
+                else if (activeTool.current.tool === "Dotter") {
                     // TODO I can improve performance by drawing in a miniscule box
-                    drawing.current.addToDrawing(context, overlayRef.current, tool,
+                    drawing.current.addToDrawing(context, overlayRef.current, activeTool.current,
                         getDot(currentPoint[0], currentPoint[1]));
                 }
             }
-            else if (geometryTools.includes(tool.tool)) {
+            else if (geometryTools.includes(activeTool.current.tool)) {
                 const context = overlayRef.current.getContext("2d");
                 let startX = getStart(startPoint[0], currentPoint[0]);
                 let startY = getStart(startPoint[1], currentPoint[1]);
                 let dx = getLength(startPoint[0], currentPoint[0]);
                 let dy = getLength(startPoint[1], currentPoint[1]);
 
-                if (tool.tool === "Line") {
+                if (activeTool.current.tool === "Line") {
                     if (shiftDown) {
-                        drawing.current.previewGeometry(context, tool,
+                        drawing.current.previewGeometry(context, activeTool.current,
                             getStraightLine(getLineStart(startPoint[0], currentPoint[0]),
                                 getLineStart(startPoint[1], currentPoint[1]),
                                 getLineEnd(startPoint[0], currentPoint[0]),
@@ -294,7 +309,7 @@ export default function Paint() {
                             startX, startY, dx, dy);
                     }
                     else {
-                        drawing.current.previewGeometry(context, tool,
+                        drawing.current.previewGeometry(context, activeTool.current,
                             getLine(getLineStart(startPoint[0], currentPoint[0]),
                                 getLineStart(startPoint[1], currentPoint[1]),
                                 getLineEnd(startPoint[0], currentPoint[0]),
@@ -302,62 +317,62 @@ export default function Paint() {
                             startX, startY, dx, dy);
                     }
                 }
-                else if (tool.tool === "Rectangle") {
+                else if (activeTool.current.tool === "Rectangle") {
                     if (shiftDown) {
                         let distance = Math.min(dx, dy);
-                        drawing.current.previewGeometry(context, tool,
+                        drawing.current.previewGeometry(context, activeTool.current,
                             getRectangle(0, 0, distance - 1, distance - 1),
                             getSquareStart(startPoint[0], currentPoint[0], distance),
                             getSquareStart(startPoint[1], currentPoint[1], distance),
                             distance, distance);
                     }
                     else {
-                        drawing.current.previewGeometry(context, tool,
+                        drawing.current.previewGeometry(context, activeTool.current,
                             getRectangle(0, 0, dx - 1, dy - 1),
                             startX, startY, dx, dy);
                     }
                 }
-                else if (tool.tool === "Fill rectangle") {
+                else if (activeTool.current.tool === "Fill rectangle") {
                     if (shiftDown) {
                         let distance = Math.min(dx, dy);
-                        drawing.current.previewGeometry(context, tool,
+                        drawing.current.previewGeometry(context, activeTool.current,
                             fillRectangle(0, 0, distance - 1, distance - 1),
                             getSquareStart(startPoint[0], currentPoint[0], distance),
                             getSquareStart(startPoint[1], currentPoint[1], distance),
                             distance, distance);
                     }
                     else {
-                        drawing.current.previewGeometry(context, tool,
+                        drawing.current.previewGeometry(context, activeTool.current,
                             fillRectangle(0, 0, dx - 1, dy - 1),
                             startX, startY, dx, dy);
                     }
                 }
-                else if (tool.tool === "Ellipse") {
+                else if (activeTool.current.tool === "Ellipse") {
                     if (shiftDown) {
                         let distance = Math.min(dx, dy);
-                        drawing.current.previewGeometry(context, tool,
+                        drawing.current.previewGeometry(context, activeTool.current,
                             getCircle(0, 0, distance - 1, distance - 1),
                             getSquareStart(startPoint[0], currentPoint[0], distance),
                             getSquareStart(startPoint[1], currentPoint[1], distance),
                             distance, distance);
                     }
                     else {
-                        drawing.current.previewGeometry(context, tool,
+                        drawing.current.previewGeometry(context, activeTool.current,
                             getEllipse(0, 0, dx - 1, dy - 1),
                             startX, startY, dx, dy);
                     }
                 }
-                else if (tool.tool === "Fill ellipse") {
+                else if (activeTool.current.tool === "Fill ellipse") {
                     if (shiftDown) {
                         let distance = Math.min(dx, dy);
-                        drawing.current.previewGeometry(context, tool,
+                        drawing.current.previewGeometry(context, activeTool.current,
                             fillEllipse(0, 0, distance - 1, distance - 1),
                             getSquareStart(startPoint[0], currentPoint[0], distance),
                             getSquareStart(startPoint[1], currentPoint[1], distance),
                             distance, distance);
                     }
                     else {
-                        drawing.current.previewGeometry(context, tool,
+                        drawing.current.previewGeometry(context, activeTool.current,
                             fillEllipse(0, 0, dx - 1, dy - 1),
                             startX, startY, dx, dy);
                     }
@@ -385,6 +400,22 @@ export default function Paint() {
         }
     }, []);
 
+    function setToolColor(color) {
+        // Set active color to a palette color
+        activeTool.current.red = color.red;
+        activeTool.current.green = color.green;
+        activeTool.current.blue = color.blue;
+        activeTool.current.alpha = 255;
+        activeTool.current.colorIndex = color.index;
+    }
+
+    function setToolErase() {
+        // Set active color to full transparency
+        activeTool.current.alpha = 0;
+        activeTool.current.colorIndex = -1;
+    }
+
+
     const onDown = useCallback((event) => {
         // Called on mouse press
         let id = event.target.id;
@@ -402,22 +433,22 @@ export default function Paint() {
 
             if (event.button === 0 && !canvasRightDown) {
                 canvasLeftDown = true;
-                // if (drawingTools.includes(activeTool.current.tool)) {
-                //     drawing.current.startDrawing(overlayRef.current.getContext("2d"));
-                // }
-                activeTool.current.red = hexToColor(activeTool.current.color, 0);
-                activeTool.current.green = hexToColor(activeTool.current.color, 1);
-                activeTool.current.blue = hexToColor(activeTool.current.color, 2);
+
+                if (activeTool.current.tool === "Eraser") setToolErase();
+                else setToolColor(primaryCRef.current);
             }
             else if (event.button === 2 && !canvasLeftDown) {
                 canvasRightDown = true;
-                // if (drawingTools.includes(activeTool.current.tool)) {
-                //     drawing.current.startDrawing(overlayRef.current.getContext("2d"));
-                // }
-                activeTool.current.red = hexToColor(activeTool.current.eraser, 0);
-                activeTool.current.green = hexToColor(activeTool.current.eraser, 1);
-                activeTool.current.blue = hexToColor(activeTool.current.eraser, 2);
+
+                if (activeTool.current.tool === "Eraser") setToolErase();
+                else setToolColor(secondaryCRef.current);
             }
+
+            if (activeTool.current.tool === "Bucket" && (canvasRightDown || canvasLeftDown)) {
+                drawing.current.fillWithColor(canvasRef.current.getContext("2d", { willReadFrequently: true }),
+                    activeTool.current, x, y);
+            }
+
             startPoint = [x, y];
         }
     }, []);
@@ -459,12 +490,18 @@ export default function Paint() {
         // Had to do async or I'd just get a promise
         const fetchPalette = async () => {
             let paletteObject = await getPalette(null, token);
-            setPalette(paletteObject.getColors());
+            let colors = paletteObject.getColors();
+            setPalette(colors);
+            setPrimaryColor(new PaletteColor(colors[0].red, colors[0].green, colors[0].blue,
+                colors[0].index, colors[0].order));
+            setSecondaryColor(new PaletteColor(colors[7].red, colors[7].green,
+                colors[7].blue, colors[7].index, colors[7].order));
+            primaryCRef.current = new PaletteColor(colors[0].red, colors[0].green, colors[0].blue,
+                colors[0].index, colors[0].order);
+            secondaryCRef.current = new PaletteColor(colors[7].red, colors[7].green,
+                colors[7].blue, colors[7].index, colors[7].order);
         }
         fetchPalette();
-
-        // You can get a default palette user_setup but I proabably won't need it anymore
-        // setPalette(standardPalette);
 
         loopId = requestAnimationFrame(drawingLoop);
 

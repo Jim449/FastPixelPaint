@@ -45,7 +45,7 @@ export default function FileSystem({ mode, action, onCancel }) {
 
     async function searchFolder(token, path) {
         // Opens the folder with the given path
-        let url = `http://localhost:8000/v1/path/${path}`;
+        let url = `http://localhost:8000/v1/path?path=${path}`;
 
         try {
             const response = await fetch(url, {

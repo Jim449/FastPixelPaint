@@ -110,6 +110,9 @@ export class Palette {
         return this.colors.map((item) => ({
             index: item.index,
             order: item.order,
+            red: item.red,
+            green: item.green,
+            blue: item.blue,
             color: rgbToHex(item.red, item.green, item.blue)
         }));
     }
@@ -164,8 +167,8 @@ export class ImageLayer {
         this.height = height;
         this.order = order;
         this.visible = true;
-        this.indexedColors = [-1];
-        this.colorSet = [];
+        this.indexedColors = [];
+        this.colorSet = [-1];
 
         for (let i = 0; i < width * height; i++) {
             this.indexedColors.push(-1);
@@ -173,19 +176,36 @@ export class ImageLayer {
     }
 
     draw(x, y, colorIndex) {
+        // Draws an indexed color to this image
         this.indexedColors[(y * this.width + x)] = colorIndex;
+    }
 
-        // Might save some time when replacing colors
-        // I should remove colors from colorSet
-        // once they are no longer in use
-        // But this is still better than nothing
-        if (!this.colorSet.includes(colorIndex)) {
-            this.colorSet.push(colorIndex);
-        }
+
+    draw1D(coordinates, colorIndex) {
+        // Draws an indexed color to this image
+        // Accepts single coordinate = y*width + x
+        this.indexedColors[coordinates] = colorIndex;
     }
 
     getColor(x, y) {
+        // Returns an indexed color
         return this.indexedColors[(y * this.width + x)];
+    }
+
+    getColor1D(coordinates) {
+        // Returns an indexed color
+        // Accepts single coordinate = y*width + x
+        return this.indexedColors[coordinates];
+    }
+
+    addToColorSet(colorIndex) {
+        // Adds a color to the set of colors
+        // Should save time when searching for a color in several layers
+        // Even if a color is present in the set
+        // it may have been overwritten in the image
+        if (!this.colorSet.includes(colorIndex)) {
+            this.colorSet.push(colorIndex);
+        }
     }
 }
 
@@ -253,17 +273,15 @@ export class Drawing {
 
 
     startDrawing(context) {
+        // Starts drawing with a pencil
+        // Not needed at the moment but will be useful once I add history
         this.savedImageData = context.createImageData(this.width, this.height);
         // this.savedShape = [];
     }
 
 
     addToDrawing(context, overlay, activeTool, shape) {
-        // console.log(shape); Looks fine
-        // Do I need to use a draw image?
-        // Then I need to lower the size to make it efficient
-        // Try changing to createImageData above
-
+        // Draws using a pencil etc. Drawing is immediately committed to canvas
         let overlayContext = overlay.getContext("2d");
         let imageData = overlayContext.createImageData(this.width, this.height);
         let data = imageData.data;
@@ -277,18 +295,102 @@ export class Drawing {
                 data[dataIndex + 2] = activeTool.blue;
                 data[dataIndex + 3] = 255;
             }
+            this.image.draw(coordinates.x, coordinates.y, activeTool.colorIndex);
         });
         // this.savedShape.concat(shape);
 
         overlayContext.putImageData(imageData, 0, 0);
         context.drawImage(overlay, 0, 0);
+        this.image.addToColorSet(activeTool.colorIndex);
     }
 
 
     finishDrawing(context, overlay) {
+        // Finish drawing with a pencil etc.
+        // Not needed at the moment since addToDrawing commits drawing to canvas
+        // May be useful if I add history
         let overlayContext = overlay.getContext("2d");
         overlayContext.putImageData(this.savedImageData, 0, 0);
         context.drawImage(overlay, 0, 0);
+    }
+
+
+    traverse(direction, width, step) {
+        // Returns change in coordinate when going
+        // 0-North, 1-East, 2-South, 3-West
+        // given a canvas width and a step
+        // (step=4 on canvas, for each of RGBA, otherwise 1)
+        if (direction === 0) return width * -step;
+        else if (direction === 1) return step;
+        else if (direction === 2) return width * step;
+        else if (direction === 3) return -step;
+        else return 0;
+    }
+
+
+    isColor(data, coordinates, red, green, blue, alpha) {
+        return (data[coordinates] == red
+            && data[coordinates + 1] == green
+            && data[coordinates + 2] == blue
+            && data[coordinates + 3] == alpha);
+    }
+
+
+    setColor(data, coordinates, red, green, blue, alpha) {
+        data[coordinates] = red;
+        data[coordinates + 1] = green;
+        data[coordinates + 2] = blue;
+        data[coordinates + 3] = alpha;
+    }
+
+
+    fillWithColor(context, tool, startX, startY) {
+        // Fills an area with color
+        let imageData = context.getImageData(0, 0, this.width, this.height);
+        let data = imageData.data;
+        let visited = [];
+        let current = [];
+        let queue = [];
+        let coordinates = (startY * this.width + startX);
+        let size = this.height * this.width;
+        let baseIndex = this.image.getColor1D(coordinates);
+
+        if (baseIndex == tool.colorIndex) return;
+
+        queue.push(coordinates);
+        visited.push(coordinates);
+        this.setColor(data, coordinates * 4, tool.red, tool.green, tool.blue, tool.alpha);
+        this.image.draw1D(coordinates, tool.colorIndex);
+
+        while (queue.length > 0) {
+            current = queue.splice(0, queue.length);
+
+            current.forEach((center) => {
+                for (let dir = 0; dir < 4; dir++) {
+                    let neighbor = center + this.traverse(dir, this.width, 1);
+
+                    if (neighbor >= 0 && neighbor < size
+                        && !visited.includes(neighbor)) {
+                        visited.push(neighbor);
+
+                        if (this.image.getColor1D(neighbor) === baseIndex) {
+                            queue.push(neighbor);
+                            this.setColor(data, neighbor * 4, tool.red, tool.green, tool.blue, tool.alpha);
+                            this.image.draw1D(neighbor, tool.colorIndex);
+                        }
+                    }
+                }
+            });
+        }
+        // Finally drawing something!
+        // But it's slow...
+        // I guess I could use the built in fill function
+        // But I'll still need to write indexed colors
+        // I should try the recursive version
+        // It saves me the need to create all these lists
+        // The includes-check is probably quite expensive
+        context.putImageData(imageData, 0, 0);
+        this.image.addToColorSet(tool.colorIndex);
     }
 
     previewGeometry(context, activeTool, shape, startX, startY, dx, dy) {
@@ -359,6 +461,7 @@ export class Drawing {
             // coordinates.lastAlpha = imageData.data[dataIndex + 3];
         });
         context.drawImage(overlay, 0, 0);
+        this.image.addToColorSet(activeTool.colorIndex);
 
         // Change to active layer when I have layers
         // this.addHistory(this.image, shape, startX, startY, dx, dy, activeTool.colorIndex,

@@ -146,7 +146,7 @@ def get_root(user=Depends(get_current_user),
     }
 
 
-@router.get("/path/{pathname}", status_code=status.HTTP_200_OK)
+@router.get("/path", status_code=status.HTTP_200_OK)
 def get_path(pathname: str, user=Depends(get_current_user),
              db: Session = Depends(get_db)):
     current_folder = db.execute(
