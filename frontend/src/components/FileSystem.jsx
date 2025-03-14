@@ -94,7 +94,9 @@ export default function FileSystem({ mode, action, onCancel }) {
             setSaveError("Invalid file name. Ensure name doesn't include any '/'");
         }
         else {
-            action(saveName, activeFolder);
+            // Should have overwrite check
+            // Show prompt and send id of replaced item
+            action(saveName, activeFolder, false);
         }
     }
 

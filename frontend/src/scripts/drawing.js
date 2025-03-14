@@ -45,57 +45,6 @@ export async function getPalette(id, token) {
 }
 
 
-export async function savePalette(palette, token) {
-    // Saves the current palette. Requires a list of colors
-    // {red, green, blue, index, order}
-    try {
-        let path = `http://localhost:8000/v1/palette/${id}`;
-
-        const response = await fetch(path,
-            {
-                method: "PUT",
-                headers: {
-                    "Authorization": `Bearer ${token}`,
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify(palette)
-            });
-        const data = await response.json();
-
-        if (!response.ok) throw new Error("Error when saving palette");
-
-        return data;
-    }
-    catch {
-        return false;
-    }
-}
-
-
-export async function createPalette(palette, token) {
-    // Saves the current palette as a new palette
-    try {
-        let path = `http://localhost:8000/v1/palette`;
-
-        const response = await fetch(path,
-            {
-                method: "POST",
-                headers: {
-                    "Authorization": `Bearer ${token}`,
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify(palette)
-            });
-        const data = await response.json();
-
-        if (!response.ok) throw new Error("Error when saving palette");
-
-        return data;
-    }
-    catch { }
-}
-
-
 export class Palette {
     constructor(palette) {
         this.id = palette.id;
@@ -220,6 +169,7 @@ export class Drawing {
         this.image = null;
         this.activeLayer = null;
         this.preview = null;
+        this.palette = null;
         this.savedShape = null;
         this.savedX = null;
         this.savedY = null;
@@ -348,7 +298,6 @@ export class Drawing {
         // Fills an area with color
         let imageData = context.getImageData(0, 0, this.width, this.height);
         let data = imageData.data;
-        let visited = [];
         let current = [];
         let queue = [];
         let coordinates = (startY * this.width + startX);
@@ -358,7 +307,6 @@ export class Drawing {
         if (baseIndex == tool.colorIndex) return;
 
         queue.push(coordinates);
-        visited.push(coordinates);
         this.setColor(data, coordinates * 4, tool.red, tool.green, tool.blue, tool.alpha);
         this.image.draw1D(coordinates, tool.colorIndex);
 
@@ -370,25 +318,17 @@ export class Drawing {
                     let neighbor = center + this.traverse(dir, this.width, 1);
 
                     if (neighbor >= 0 && neighbor < size
-                        && !visited.includes(neighbor)) {
-                        visited.push(neighbor);
-
-                        if (this.image.getColor1D(neighbor) === baseIndex) {
-                            queue.push(neighbor);
-                            this.setColor(data, neighbor * 4, tool.red, tool.green, tool.blue, tool.alpha);
-                            this.image.draw1D(neighbor, tool.colorIndex);
-                        }
+                        && this.image.getColor1D(neighbor) === baseIndex) {
+                        queue.push(neighbor);
+                        this.setColor(data, neighbor * 4, tool.red, tool.green, tool.blue, tool.alpha);
+                        this.image.draw1D(neighbor, tool.colorIndex);
                     }
                 }
             });
         }
         // Finally drawing something!
         // But it's slow...
-        // I guess I could use the built in fill function
-        // But I'll still need to write indexed colors
-        // I should try the recursive version
-        // It saves me the need to create all these lists
-        // The includes-check is probably quite expensive
+        // I should be able to skip one of the lists
         context.putImageData(imageData, 0, 0);
         this.image.addToColorSet(tool.colorIndex);
     }

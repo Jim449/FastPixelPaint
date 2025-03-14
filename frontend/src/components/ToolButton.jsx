@@ -5,7 +5,7 @@ export default function ToolButton({ name, icon, selectedTool, onClick }) {
     return <button
         id={name}
         onClick={onClick}
-        className={(name === selectedTool) ? "bg-gray-200 border border-gray-200 py-1 px-2" : "bg-gray-50 border border-gray-200 py-1 px-2"}>
-        {name}
+        className={(name === selectedTool) ? "box-content border border-gray-400 size-[30px]" : "box-content border border-white size-[30px]"}
+        style={{ backgroundImage: `url('${icon}')` }}>
     </button>
 }

@@ -9,7 +9,7 @@ import { getDot, getLine, getStraightLine, getCircle, getEllipse, fillEllipse, g
 import { Drawing, PaletteColor } from "src/scripts/drawing";
 import { authStore } from "src/store/authStore";
 import { useNavigate } from "react-router-dom";
-import { hexToColor, rgbToHex, getPalette, savePalette, createPalette, Palette } from "../scripts/drawing";
+import { hexToColor, rgbToHex, getPalette, Palette } from "../scripts/drawing";
 
 export default function Paint() {
     const { token } = authStore();
@@ -28,7 +28,6 @@ export default function Paint() {
     const [loggedIn, setLoggedIn] = useState((token) ? true : false);
     const [file, setFile] = useState(null);
 
-    const paletteObject = {};
     const drawing = useRef(new Drawing(300, 300));
     const canvasRef = useRef();
     const overlayRef = useRef();
@@ -37,6 +36,7 @@ export default function Paint() {
     const menuOpen = useRef(false);
     // This too
     const activeTool = useRef({ tool: "", size: 1, color: "#000000", red: 0, blue: 0, green: 0, alpha: 255, colorIndex: 0 });
+    // I do have color states but I need mutable objects
     const primaryCRef = useRef({});
     const secondaryCRef = useRef({});
     const navigate = useNavigate();
@@ -53,11 +53,14 @@ export default function Paint() {
     const fileOptions = [
         { label: "New", type: "button", action: () => { } },
         { label: "Open", type: "button", action: () => { } },
-        { label: "Save", type: "button", action: () => { } },
+        {
+            label: "Save", type: "button", action: () => {
+                saveImage(drawing.current, token, "POST");
+            }
+        },
         { label: "Save next", type: "button", action: () => { } },
-        { label: "Save as...", type: "button", action: () => { } },
+        { label: "Save as...", type: "button", action: { imageSaveMenu } },
         { label: "Export", type: "button", action: downloadImage },
-        { label: "Export as...", type: "button", action: () => { } },
         { label: "Open and generate palette", type: "button", action: () => { } },
         { label: "Open with current palette", type: "button", action: () => { } },
         { label: "Open text editor", type: "button", action: () => { } },
@@ -85,29 +88,17 @@ export default function Paint() {
     const paletteOptions = [
         {
             label: "Save palette", type: "button", action: () => {
-                if (paletteObject.universal) {
-                    setMessage("Please use the 'save palette as...' option.");
-                }
-                else if (savePalette(paletteObject, token)) {
-                    setMessage("Palette saved successfully.");
-                }
-                else {
-                    setMessage("There was an unexpected error when attempting to save the palette.");
-                }
+                savePalette(drawing.current.palette, token, "PUT")
             }
         },
-        { label: "Save palette as...", type: "button", action: () => { } },
+        { label: "Save palette as...", type: "button", action: { paletteSaveMenu } },
         { label: "Switch palette", type: "button", action: () => { } },
         {
             label: "Select as default", type: "button", action: () => {
-                if (!paletteObject.universal) {
-                    setMessage("Cannot modify a universal palette. Please save a personal copy of the palette.");
-                }
-                else if (paletteObject.default_palette || savePalette(paletteObject, token)) {
-                    setMessage("Palette is set as default");
-                }
-                else {
-                    setMessage("Failed to set palette as default due to unexpected error.")
+                if (drawing.current.palette.universal) {
+                    setMessage("Please save the palette before setting it as your default.")
+                    // I should have an endpoint for this
+                    // I do need to set all other palettes to non-default
                 }
             }
         },
@@ -133,6 +124,105 @@ export default function Paint() {
         a.download = "Testfile.png";
         a.click();
     }
+
+    function imageSaveMenu() {
+        setFile({
+            mode: "Save image", action: (name, folder, overwriteId) => {
+                drawing.current.name = name;
+                drawing.current.folder_id = folder.id;
+
+                if (overwriteId) {
+                    drawing.current.id = overwriteId;
+                    saveImage(drawing.current, token, "PUT");
+                }
+                else saveImage(drawing.current, token, "POST");
+            }
+        });
+    }
+
+
+    async function saveImage(image, token, method) {
+        // Saves the current image
+        try {
+            let path;
+
+            if (method === "PUT") path = `http://localhost:8000/v1/image/${image.id}`;
+            else if (method === "POST") path = `http://localhost:8000/v1/image`;
+            else return;
+
+            const response = await fetch(path,
+                {
+                    method: method,
+                    headers: {
+                        "Authorization": `Bearer ${token}`,
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify(image)
+                });
+            const data = await response.json();
+
+            if (response.ok) {
+                setMessage("Image saved successfully!");
+                drawing.current.id = data.id;
+                return data;
+            }
+            else throw new Error("Error when saving image");
+        }
+        catch (error) {
+            console.log(error);
+            setMessage("An error occurred when attempting to save image.");
+        }
+    }
+
+
+    function paletteSaveMenu() {
+        setFile({
+            mode: "Save palette", action: (name, folder, overwriteId) => {
+                drawing.current.palette.name = name;
+                drawing.current.palette.folder_id = folder.id;
+
+                if (overwriteId) {
+                    drawing.current.palette.id = overwriteId;
+                    savePalette(drawing.current.palette, token, "PUT");
+                }
+                else savePalette(drawing.current.palette, token, "POST");
+            }
+        });
+    }
+
+    async function savePalette(palette, token, method) {
+        // Saves the current palette
+        try {
+            let path;
+
+            if (method === "PUT") path = `http://localhost:8000/v1/palette/${palette.id}`;
+            else if (method === "POST") path = `http://localhost:8000/v1/palette`;
+            else return;
+
+            const response = await fetch(path,
+                {
+                    method: method,
+                    headers: {
+                        "Authorization": `Bearer ${token}`,
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify(palette)
+                });
+            const data = await response.json();
+
+            if (response.ok) {
+                setMessage("Palette saved successfully!");
+                drawing.current.palette.id = data.id;
+                return data;
+            }
+            else throw new Error("Error when saving palette");
+        }
+        catch (error) {
+            console.log(error);
+            setMessage("An error occurred when attempting to save palette.");
+        }
+    }
+
 
     function onMenuOpen(event) {
         // Toggles dropdown menu
@@ -160,11 +250,6 @@ export default function Paint() {
         let pColor = new PaletteColor(red, green, blue, index, order);
         setPrimaryColor(pColor);
         primaryCRef.current = pColor;
-        // With this commented out, it doesn't work
-        // But I don't want to set the color here
-        // I want to set it in onDown
-        // activeTool.current.color = color;
-        // activeTool.current.colorIndex = index;
     }
 
     function onPaletteRightClick(event, index, order, color) {
@@ -175,8 +260,6 @@ export default function Paint() {
         let pColor = new PaletteColor(red, green, blue, index, order);
         setSecondaryColor(pColor);
         secondaryCRef.current = pColor;
-        // activeTool.current.color = color;
-        // activeTool.current.colorIndex = index;
     }
 
     function previewPrimaryColor(red, green, blue) {
@@ -491,6 +574,7 @@ export default function Paint() {
         const fetchPalette = async () => {
             let paletteObject = await getPalette(null, token);
             let colors = paletteObject.getColors();
+            drawing.current.palette = paletteObject;
             setPalette(colors);
             setPrimaryColor(new PaletteColor(colors[0].red, colors[0].green, colors[0].blue,
                 colors[0].index, colors[0].order));
@@ -526,9 +610,9 @@ export default function Paint() {
             </FileSystem>
         </div>
         }
-        <div className="flex rounded-b-lg border-b border-b-gray-300">
+        <div className="flex border-b border-b-gray-300">
             <nav>
-                <ul className="flex text-sm ml-3 mt-1">
+                <ul className="flex ml-3 mt-1 text-lg font-[Mercutio_NBP_Basic]">
                     <li className="relative">
                         <button
                             id="File"
@@ -573,53 +657,27 @@ export default function Paint() {
                 </ul>
             </nav>
         </div>
-        <div className="flex flex-row border-b border-b-gray-300">
-            <nav>
-                <ul className="flex flex-row text-xs border-l border-r border-gray-300">
-                    <li><button className="py-1 px-2">Size</button></li>
-                </ul>
-            </nav>
-            <nav>
-                <ul className="flex flex-row text-xs border-l border-r border-gray-300">
-                    <ToolButton name="Pencil" icon={null} selectedTool={tool} onClick={onToolSelect}></ToolButton>
-                    <ToolButton name="Dotter" icon={null} selectedTool={tool} onClick={onToolSelect}></ToolButton>
-                    <ToolButton name="Bucket" icon={null} selectedTool={tool} onClick={onToolSelect}></ToolButton>
-                    <ToolButton name="Eraser" icon={null} selectedTool={tool} onClick={onToolSelect}></ToolButton>
-                </ul>
-            </nav>
-            <nav>
-                <ul className="flex flex-row text-xs border-l border-r border-gray-300">
-                    <ToolButton name="Line" icon={null} selectedTool={tool} onClick={onToolSelect}></ToolButton>
-                    <ToolButton name="Rectangle" icon={null} selectedTool={tool} onClick={onToolSelect}></ToolButton>
-                    <ToolButton name="Fill rectangle" icon={null} selectedTool={tool} onClick={onToolSelect}></ToolButton>
-                    <ToolButton name="Ellipse" icon={null} selectedTool={tool} onClick={onToolSelect}></ToolButton>
-                    <ToolButton name="Fill ellipse" icon={null} selectedTool={tool} onClick={onToolSelect}></ToolButton>
-                </ul>
-            </nav>
-            <nav>
-                <ul className="flex flex-row text-xs border-l border-r border-gray-300">
-                    <li><button className="py-1 px-2">Select</button></li>
-                    <li><button className="py-1 px-2">Copy</button></li>
-                    <li><button className="py-1 px-2">Cut</button></li>
-                    <li><button className="py-1 px-2">Paste</button></li>
-                </ul>
-            </nav>
-            <nav>
-                <ul className="flex flex-row text-xs border-l border-r border-gray-300">
-                    <ToolButton name="Dithering pencil" icon={null} selectedTool={tool} onClick={onToolSelect}></ToolButton>
-                    <ToolButton name="Dithering bucket" icon={null} selectedTool={tool} onClick={onToolSelect}></ToolButton>
-                    <li><button className="py-1 px-2">Dithering pattern</button></li>
-                </ul>
-            </nav>
-            <nav>
-                <ul className="flex flex-row text-xs border-l border-r border-gray-300">
-                    <li><button className="py-1 px-2">Zoom</button></li>
-                    <li><button className="py-1 px-2">Restore zoom</button></li>
-                </ul>
-            </nav>
-        </div>
         {/* Needed min-h-full to lower height and enforce scroll */}
         <div className="flex grow min-h-full">
+            <div className="flex flex-col border-r border-gray-300 bg-white">
+                <nav>
+                    <ul className="grid grid-cols-2 text-xs p-1 m-1 bg-white border-y border-gray-300">
+                        <ToolButton name="Pencil" icon={"images/Pencil.png"} selectedTool={tool} onClick={onToolSelect}></ToolButton>
+                        <ToolButton name="Dotter" icon={"images/Dotter.png"} selectedTool={tool} onClick={onToolSelect}></ToolButton>
+                        <ToolButton name="Bucket" icon={"images/Bucket.png"} selectedTool={tool} onClick={onToolSelect}></ToolButton>
+                        <ToolButton name="Eraser" icon={"images/Eraser.png"} selectedTool={tool} onClick={onToolSelect}></ToolButton>
+                    </ul>
+                </nav>
+                <nav>
+                    <ul className="grid grid-cols-2 text-xs p-1 m-1 bg-white border-y border-gray-300">
+                        <ToolButton name="Line" icon={"images/Line.png"} selectedTool={tool} onClick={onToolSelect}></ToolButton>
+                        <ToolButton name="Rectangle" icon={"images/Rectangle.png"} selectedTool={tool} onClick={onToolSelect}></ToolButton>
+                        <ToolButton name="Fill rectangle" icon={"images/Filled rectangle.png"} selectedTool={tool} onClick={onToolSelect}></ToolButton>
+                        <ToolButton name="Ellipse" icon={"images/Circle.png"} selectedTool={tool} onClick={onToolSelect}></ToolButton>
+                        <ToolButton name="Fill ellipse" icon={"images/Filled circle.png"} selectedTool={tool} onClick={onToolSelect}></ToolButton>
+                    </ul>
+                </nav>
+            </div>
             {/* Box-sizing and -4 positioning ensures border can be fully covered by canvas */}
             <div className="flex flex-col grow items-center overflow-scroll bg-gray-300">
                 <div className="bg-gray-300 w-[360px] min-h-[60px]"></div>
