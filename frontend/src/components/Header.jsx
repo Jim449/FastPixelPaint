@@ -22,17 +22,17 @@ export default function Header() {
         <nav className="flex flex-grow">
             <ul className="flex mx-3 pt-2 pb-2">
                 <li><Link to=""
-                    className="cursor-pointer hover:bg-gray-200 pt-1 pb-2 px-3">Home</Link></li>
+                    className="cursor-pointer hover:bg-gray-200 pt-1 pb-2 px-3 text-lg font-[Mercutio_NBP_Basic]">Home</Link></li>
                 <li><Link to="paint"
-                    className="cursor-pointer hover:bg-gray-200 pt-1 pb-2 px-3">Paint</Link></li>
+                    className="cursor-pointer hover:bg-gray-200 pt-1 pb-2 px-3 text-lg font-[Mercutio_NBP_Basic]">Paint</Link></li>
                 <li><Link to="files"
-                    className="cursor-pointer hover:bg-gray-200 pt-1 pb-2 px-3">Files</Link></li>
+                    className="cursor-pointer hover:bg-gray-200 pt-1 pb-2 px-3 text-lg font-[Mercutio_NBP_Basic]">Files</Link></li>
                 <li><Link to="about"
-                    className="cursor-pointer hover:bg-gray-200 pt-1 pb-2 px-3">About</Link></li>
+                    className="cursor-pointer hover:bg-gray-200 pt-1 pb-2 px-3 text-lg font-[Mercutio_NBP_Basic]">About</Link></li>
             </ul>
             <ul className="flex flex-grow justify-end mx-3 pt-2 pb-2">
                 <li><Link to="login"
-                    className="cursor-pointer hover:bg-gray-200 pt-1 pb-2 px-3 ml-auto">Login</Link></li>
+                    className="cursor-pointer hover:bg-gray-200 pt-1 pb-2 px-3 ml-auto text-lg font-[Mercutio_NBP_Basic]">Login</Link></li>
             </ul>
         </nav>
     </div>

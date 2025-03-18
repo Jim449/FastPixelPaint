@@ -6,7 +6,7 @@ import { Outlet } from "react-router-dom";
 export default function Layout() {
     return <div className="flex flex-col min-h-screen bg-gray-300">
         <Header></Header>
-        <div className="flex flex-col flex-grow border border-gray-100 bg-gray-50 w-[80%] mx-auto">
+        <div className="flex flex-col flex-grow border border-gray-100 bg-gray-50">
             <Outlet></Outlet>
         </div>
         <Footer></Footer>

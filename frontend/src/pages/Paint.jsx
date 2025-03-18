@@ -463,8 +463,13 @@ export default function Paint() {
             }
         }
         lastPoint = [...currentPoint];
-        if (coordinates[0] != currentPoint[0] || coordinates[1] != currentPoint[1]) {
+        // setCoordinates([...currentPoint]);
+        if (currentPoint[0] >= 0 && currentPoint[0] < canvasWidth
+            && currentPoint[1] >= 0 && currentPoint[1] < canvasHeight) {
             setCoordinates([...currentPoint]);
+        }
+        else {
+            setCoordinates([null, null]);
         }
         loopId = requestAnimationFrame(drawingLoop);
     }
@@ -733,10 +738,11 @@ export default function Paint() {
                     colorType="secondary"></ColorPicker>
             </div>
         </div>
-        <div className="flex flex-row-reverse text-xs border-t border-t-gray-300">
-            <div className="flex m-1 mr-3">
-                ({coordinates[0]}, {coordinates[1]})
-            </div>
+        <div className="flex flex-row-reverse text-xs border-t border-t-gray-300 h-7">
+            {coordinates[0] !== null &&
+                <div className="flex m-1 mr-3">
+                    ({coordinates[0]}, {coordinates[1]})
+                </div>}
         </div>
     </div>
 }
