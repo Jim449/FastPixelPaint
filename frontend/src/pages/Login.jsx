@@ -11,7 +11,7 @@ export default function Login() {
     }
 
     return <div className="flex flex-col self-center items-center w-[70%]">
-        <h1 className="text-6xl mx-auto p-6 font-[Crumbled_pixels]">Login</h1>
+        <h1 className="text-6xl mx-auto p-6 font-crumbled">Login</h1>
         <LoginForm onLogin={toRoot}></LoginForm>
     </div>
 }

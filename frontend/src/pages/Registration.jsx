@@ -65,11 +65,11 @@ export default function Registration() {
     }
 
     return <div className="flex flex-col self-center items-center w-[70%]">
-        <h1 className="text-6xl mx-auto p-6 font-[Crumbled_pixels]">Register an account</h1>
+        <h1 className="text-6xl mx-auto p-6 font-crumbled">Register an account</h1>
         <form className="bg-white border border-gray-300 rounded-lg w-80">
             <div className="flex flex-col p-3">
                 <label
-                    className="text-2xl font-[Mercutio_NBP_Basic]"
+                    className="text-2xl font-mercutio"
                     htmlFor="email-field">Email</label>
                 <input
                     id="email-field"
@@ -85,7 +85,7 @@ export default function Registration() {
             </div>
             <div className="flex flex-col p-3">
                 <label
-                    className="text-2xl font-[Mercutio_NBP_Basic]"
+                    className="text-2xl font-mercutio"
                     htmlFor="password-field">Password</label>
                 <input
                     id="password-field"

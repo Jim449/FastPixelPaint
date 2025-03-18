@@ -1,5 +1,27 @@
 @import "tailwindcss";
 
+@font-face {
+    font-family: "MercutioBasic";
+    src: url("/fonts/MERCUTIONBPBASIC-2RLV.TTF");
+}
+
+@font-face {
+    font-family: "Bahnschrift";
+    src: url("/fonts/BAHNSCHRIFT.TTF");
+}
+
+@font-face {
+    font-family: "CrumbledPixels";
+    src: url("/fonts/CRUMBLED-PIXELS.REGULAR.TTF");
+}
+
+@theme {
+    --font-bahnschrift: "Bahnschrift";
+    --font-mercutio: "MercutioBasic";
+    --font-crumbled: "CrumbledPixels";
+}
+
+
 .rangeslider {
     -webkit-appearance: none;
     appearance: none;

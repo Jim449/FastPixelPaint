@@ -617,7 +617,7 @@ export default function Paint() {
         }
         <div className="flex border-b border-b-gray-300">
             <nav>
-                <ul className="flex ml-3 mt-1 text-lg font-[Mercutio_NBP_Basic]">
+                <ul className="flex ml-3 mt-1 text-lg font-mercutio">
                     <li className="relative">
                         <button
                             id="File"
