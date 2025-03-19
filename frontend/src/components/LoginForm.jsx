@@ -1,6 +1,7 @@
 import React from "react";
 import { useState } from "react";
 import { authStore } from "src/store/authStore";
+import { Link } from "react-router-dom";
 
 export default function LoginForm({ onLogin }) {
 
@@ -107,6 +108,7 @@ export default function LoginForm({ onLogin }) {
                     type="submit">Login</button>
                 {serverError && <p className="text-red-800 text-xs">{serverError}</p>}
             </div>
+            <p className="pl-3 pb-3 pt-1 text-xs">Don't have an account? Register <Link to="/register" className="underline cursor-pointer">here</Link></p>
         </form>
     </div>
 }

@@ -24,7 +24,21 @@ export const authStore = create((set, get) => ({
         localStorage.setItem("rootId", root);
         set(() => ({ folderId: root, rootId: root }));
     },
-    logout: (set) => {
+    logout: async () => {
+        try {
+            const { token } = get();
+            console.log(token);
+            const response = await fetch("http://localhost:8000/v1/auth/logout", {
+                method: "POST",
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                    "Content-Type": "application/json"
+                }
+            });
+        }
+        catch (error) {
+            console.log(error);
+        }
         localStorage.removeItem("token");
         set(() => ({ token: null }));
     },
@@ -34,8 +48,10 @@ export const authStore = create((set, get) => ({
     },
     fetchUser: async () => {
         const { token, logout, setUserData } = get();
+        if (!token) return;
+
         try {
-            const response = await fetch("http://localhost:8000/general/user", {
+            const response = await fetch("http://localhost:8000/v1/user", {
                 method: "GET",
                 headers: {
                     Authorization: `Bearer ${token}`,
@@ -50,6 +66,8 @@ export const authStore = create((set, get) => ({
                 logout();
             }
         }
-        catch { }
+        catch (error) {
+            console.log(error);
+        }
     }
 }));

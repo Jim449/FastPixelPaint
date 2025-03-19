@@ -4,7 +4,6 @@ import ToolButton from "src/components/ToolButton";
 import PaletteButton from "src/components/PaletteButton";
 import ColorPicker from "src/components/ColorPicker";
 import MessageWindow from "src/components/MessageWindow";
-import { standardPalette } from "src/scripts/user_setup";
 import { getDot, getLine, getStraightLine, getCircle, getEllipse, fillEllipse, getRectangle, fillRectangle } from "src/scripts/geometry";
 import { Drawing, PaletteColor } from "src/scripts/drawing";
 import { authStore } from "src/store/authStore";
@@ -59,7 +58,7 @@ export default function Paint() {
             }
         },
         { label: "Save next", type: "button", action: () => { } },
-        { label: "Save as...", type: "button", action: { imageSaveMenu } },
+        { label: "Save as...", type: "button", action: imageSaveMenu },
         { label: "Export", type: "button", action: downloadImage },
         { label: "Open and generate palette", type: "button", action: () => { } },
         { label: "Open with current palette", type: "button", action: () => { } },
@@ -91,7 +90,7 @@ export default function Paint() {
                 savePalette(drawing.current.palette, token, "PUT")
             }
         },
-        { label: "Save palette as...", type: "button", action: { paletteSaveMenu } },
+        { label: "Save palette as...", type: "button", action: paletteSaveMenu },
         { label: "Switch palette", type: "button", action: () => { } },
         {
             label: "Select as default", type: "button", action: () => {
@@ -177,7 +176,8 @@ export default function Paint() {
 
     function paletteSaveMenu() {
         setFile({
-            mode: "Save palette", action: (name, folder, overwriteId) => {
+            mode: "Save palette",
+            action: (name, folder, overwriteId) => {
                 drawing.current.palette.name = name;
                 drawing.current.palette.folder_id = folder.id;
 
@@ -364,13 +364,11 @@ export default function Paint() {
                 const context = canvasRef.current.getContext("2d");
 
                 if (activeTool.current.tool === "Pencil") {
-                    // TODO I can improve performance by drawing in a smaller box
                     drawing.current.addToDrawing(context, overlayRef.current, activeTool.current,
                         getLine(lastPoint[0], lastPoint[1],
                             currentPoint[0], currentPoint[1]));
                 }
                 else if (activeTool.current.tool === "Dotter") {
-                    // TODO I can improve performance by drawing in a miniscule box
                     drawing.current.addToDrawing(context, overlayRef.current, activeTool.current,
                         getDot(currentPoint[0], currentPoint[1]));
                 }

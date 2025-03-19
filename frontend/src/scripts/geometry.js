@@ -270,3 +270,163 @@ export function fillEllipse(x1, y1, x2, y2) {
 
     return coordinates;
 }
+
+
+export function ditherOne(x, y) {
+    return (x % 4 == 0 && y % 4 == 0)
+}
+
+export function ditherTwo(x, y) {
+    return ((x % 4 == 0 && y % 4 == 0) || (x % 4 == 2 && y % 4 == 2))
+}
+
+export function ditherFour(x, y) {
+    return (x % 2 == 0 && y % 2 == 0)
+}
+
+export function ditherFive(x, y) {
+    return ((x % 2 == y % 2) && x % 4 != 3 && y % 4 != 3)
+}
+
+export function ditherSix(x, y) {
+    return ((x % 2 == 0 && y % 2 == 0) || (x % 4 + y % 4 == 4))
+}
+
+export function ditherSeven(x, y) {
+    return ((x % 2 == y % 2) && (x % 4 + y % 4 != 6))
+}
+
+export function ditherHalf(x, y) {
+    return (x % 2 == y % 2)
+}
+
+function getStart(x1, x2) {
+    // Returns the minimum of two x or y coordinates
+    return Math.min(x1, x2);
+}
+
+function getLineStart(x1, x2) {
+    // Returns a starting line coordinate with respect to either x or y
+    // Assumes drawing is done in a box with top left corner 0,0
+    if (x2 > x1) return 0;
+    else return x1 - x2;
+}
+
+function getLineEnd(x1, x2) {
+    // Returns a starting line coordinate with respect to either x or y
+    // Assumes drawing is done in a box with top left corner 0,0
+    if (x2 > x1) return x2 - x1;
+    else return 0;
+}
+
+function getSquareStart(x1, x2, distance) {
+    // Gets a starting coordinate with respect to either x or y,
+    // from which to draw a square or circle with side equal to distance.
+    // The coordinates doesn't have to describe a square area
+    if (x2 > x1) return x1;
+    else return x1 - distance;
+}
+
+function getLength(x1, x2) {
+    // Returns the distance between two coordinates
+    // If x1 == x2, returns 1 since the pixel at x1
+    // should still be painted
+    return Math.abs(x2 - x1) + 1;
+}
+
+
+function getMinLength(x1, y1, x2, y2) {
+    // Returns the minimum distance
+    return Math.min(getLength(x1, x2), getLength(y1, y2))
+}
+
+export function drawFromZero(shape, startX, startY, currentX, currentY,
+    shiftDown, width, dithering) {
+    // Returns a list of coordinates to draw
+    // Assumes the shape is drawn within a box at (0,0)
+    // TODO add stroke width.
+    // Add dithering patterns which prevents certain coordinates from being drawn on
+    if (shape == "Pencil") {
+        return getLine(startX, startY, currentX, currentY);
+    }
+    else if (shape == "Dotter") {
+        return getDot(currentX, currentY);
+    }
+    else if (shape == "Line") {
+        if (shiftDown) {
+            return getStraightLine(
+                getLineStart(startX, currentX), getLineStart(startY, currentY),
+                getLineEnd(startX, currentX), getLineEnd(startY, currentY));
+        }
+        else {
+            return getLine(
+                getLineStart(startX, currentX), getLineStart(startY, currentY),
+                getLineEnd(startX, currentX), getLineEnd(startY, currentY));
+        }
+    }
+    else if (shape == "Rectangle") {
+        if (shiftDown) {
+            let distance = getMinLength(startX, startY, currentX, currentY) - 1;
+            return getRectangle(0, 0, distance, distance);
+        }
+        else {
+            return getRectangle(0, 0,
+                getLength(startX, currentX) - 1, getLength(startY, currentY) - 1);
+        }
+    }
+    else if (shape == "Fill rectangle") {
+        if (shiftDown) {
+            let distance = getMinLength(startX, startY, currentX, currentY) - 1;
+            return fillRectangle(0, 0, distance, distance);
+        }
+        else {
+            return fillRectangle(0, 0,
+                getLength(startX, currentX) - 1, getLength(startY, currentY) - 1);
+        }
+    }
+    else if (shape == "Ellipse") {
+        if (shiftDown) {
+            let distance = getMinLength(startX, startY, currentX, currentY) - 1;
+            return getCircle(0, 0, distance, distance);
+        }
+        else {
+            return getEllipse(0, 0,
+                getLength(startX, currentY) - 1, getLength(startY, currentY) - 1);
+        }
+    }
+    else if (shape == "Fill ellipse") {
+        if (shiftDown) {
+            let distance = getMinLength(startX, startY, currentX, currentY) - 1;
+            return fillCircle(0, 0, distance, distance);
+        }
+        else {
+            return fillEllipse(0, 0,
+                getLength(startX, currentY) - 1, getLength(startY, currentY) - 1);
+        }
+    }
+}
+
+
+export function getDrawingArea(shape, startX, startY, currentX, currentY, width) {
+    // Returns a rectangle (x, y, length, height) in which a shape can be drawn
+    // TODO add width
+    if (shape == "Pencil" || shape == "Line") {
+        return [getStart(startX, currentX), getStart(startY, currentY),
+        getLength(startX, currentX), getLength(startY, currentY)];
+    }
+    else if (shape == "Dotter") {
+        return [getStart(startX, currentX), getStart(startY, currentY), 1, 1];
+    }
+    else if (shape == "Rectangle" || shape == "Fill rectangle"
+        || shape == "Ellipse" || shape == "Fill ellipse") {
+        if (shiftDown) {
+            let distance = getMinLength(startX, startY, currentX, currentY);
+            return [getSquareStart(startX, currentX), getSquareStart(startY, currentY),
+                distance, distance];
+        }
+        else {
+            return [getStart(startX, currentX), getStart(startY, currentY),
+            getLength(startX, currentX), getLength(startY, currentY)]
+        }
+    }
+}
