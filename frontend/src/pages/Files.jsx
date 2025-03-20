@@ -1,12 +1,17 @@
 import React from "react"
 import FileSystem from "src/components/FileSystem"
+import { authStore } from "src/store/authStore";
+import { useNavigate } from "react-router-dom";
 
 export default function Files() {
 
-    function testSave(name, folder) {
-        console.log(name);
-        console.log(folder);
+    function testOpen(file) {
+        console.log(file);
+        // TODO Should have a way to seperate images and palettes
+        // Set authStore variables paletteId, imageId
+        // Do a useNavigate to /paint
+        // Make sure the right palette and image is opened
     }
-    // Don't need to save here but do test it out
-    return <FileSystem mode={"Save"} action={testSave} onCancel={null}></FileSystem>
+
+    return <FileSystem mode={null} action={testOpen} onCancel={null}></FileSystem>
 }

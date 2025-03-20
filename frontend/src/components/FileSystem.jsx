@@ -14,6 +14,7 @@ export default function FileSystem({ mode, action, onCancel }) {
     const [nameField, setNameField] = useState(false);
     const [saveName, setSaveName] = useState("");
     const [saveError, setSaveError] = useState("");
+    const [overwrite, setOverwrite] = useState(null);
     const [path, setPath] = useState([]);
 
     let selected = null;
@@ -90,14 +91,26 @@ export default function FileSystem({ mode, action, onCancel }) {
 
     function handleSave(event) {
         // Checks if file can be saved. Handle save using passed function
+        let overwriteList;
+
         if (saveName.includes("/")) {
             setSaveError("Invalid file name. Ensure name doesn't include any '/'");
         }
-        else {
-            // Should have overwrite check
-            // Show prompt and send id of replaced item
-            action(saveName, activeFolder, false);
+        else if (mode == "Save palette") {
+            overwriteList = palettes.filter(item => (item.name == saveName));
+            if (overwriteList.length > 0) setOverwrite(overwriteList[0].id);
+            else action(saveName, activeFolder, null);
         }
+        else if (mode == "Save image") {
+            overwriteList = images.filter(item => (item.name == saveName));
+            if (overwriteList.length > 0) setOverwrite(overwriteList[0].id);
+            else action(saveName, activeFolder, null);
+        }
+    }
+
+    function handleOverwrite(event) {
+        // Saves a file. Handle save using passed function
+        action(saveName, activeFolder, overwrite);
     }
 
 
@@ -266,12 +279,12 @@ export default function FileSystem({ mode, action, onCancel }) {
                 </tr>)}
             </tbody>
         </table>
-        {mode === "Save" && <div className="flex">
+        {mode.includes("Save") && <div className="flex">
             <input
                 className="grow m-2 pl-2"
                 type="text"
                 placeholder="Enter save name"
-                onChange={(event) => setSaveName(event.target.value)}>
+                onChange={(event) => { setSaveName(event.target.value); setOverwrite(null) }}>
             </input>
             <button
                 className="m-2 px-2 py-1 bg-gray-100 border border-gray-300 cursor-pointer"
@@ -279,6 +292,11 @@ export default function FileSystem({ mode, action, onCancel }) {
             <button
                 className="m-2 px-2 py-1 bg-gray-100 border border-gray-300 cursor-pointer"
                 onClick={onCancel}>Cancel</button>
+        </div>}
+        {overwrite !== null && <div className="flex">
+            <button
+                className="m-2 px-2 py-1 bg-gray-100 border border-gray-300 cursor-pointer"
+                onClick={handleOverwrite}>Ok to overwrite?</button>
         </div>}
         {mode.includes("Open") && <div className="flex">
             <button

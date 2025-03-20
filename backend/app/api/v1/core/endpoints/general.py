@@ -31,6 +31,64 @@ def get_image(id: int, user=Depends(get_user_or_none),
     return image
 
 
+@router.post("/image", status_code=status.HTTP_201_CREATED)
+def create_image(image: schema.Image, layer: schema.Layer,
+                 user=Depends(get_user_or_none), db: Session = Depends(get_db)):
+    folder = db.execute(
+        select(model.Folder).where(model.Folder.id == image.folder_id)).scalars().first()
+    if folder.user_id != user.id:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,
+                            detail="User cannot access parent folder")
+
+    db_image = model.Palette(**image.model_dump())
+    db_layer = model.Layer(**layer.model_dump())
+    setattr(db_image, "layers", [db_layer])
+    db.add(db_image)
+    db.commit()
+    return db_image
+
+
+@router.put("/image/{id}", status_code=status.HTTP_200_OK)
+def set_image(id, image: schema.Image, layer: schema.Layer,
+              user=Depends(get_user_or_none), db: Session = Depends(get_db)):
+    folder = db.execute(
+        select(model.Folder).where(model.Folder.id == image.folder_id)).scalars().first()
+    if folder.user_id != user.id:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,
+                            detail="User cannot access parent folder")
+
+    db_image = model.Palette(**image.model_dump())
+    db_layer = model.Layer(**layer.model_dump())
+    existing_image = db.execute(
+        select(model.Image).where(model.Image.id == id)).scalars().first()
+    existing_layer = db.execute(
+        select(model.Layer).where(model.Layer.image_id == id)).scalars().first()
+
+    for key, value in db_image:
+        setattr(existing_image, key, value)
+    for key, value in db_layer:
+        setattr(existing_layer, key, value)
+
+    db.commit()
+    return db_image
+
+
+@router.delete("/image/{id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_image(id: int, user=Depends(get_current_user),
+                 db: Session = Depends(get_db)):
+    image = db.execute(
+        select(model.Palette).where(model.Palette.id == id)).scalars().first()
+    layer = db.execute(
+        select(model.Layer).where(model.Layer.image_id == image.id)).scalars().first()
+
+    if image.user_id != user.id:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,
+                            detail="Cannot delete other users image")
+    db.delete(layer)
+    db.delete(image)
+    db.commit()
+
+
 @router.get("/palette/{id}", status_code=status.HTTP_200_OK)
 def get_palette(id: int, user=Depends(get_user_or_none),
                 db: Session = Depends(get_db)) -> schema.Palette:
@@ -47,6 +105,53 @@ def get_palette(id: int, user=Depends(get_user_or_none),
     else:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,
                             detail="Palette not accessible by current user")
+
+
+@router.post("/palette", status_code=status.HTTP_201_CREATED)
+def create_palette(palette: schema.Palette, user=Depends(get_current_user),
+                   db: Session = Depends(get_db)):
+    folder = db.execute(
+        select(model.Folder).where(model.Folder.id == palette.folder_id)).scalars().first()
+    if folder.user_id != user.id:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,
+                            detail="User cannot access parent folder")
+
+    db_palette = model.Palette(**palette.model_dump())
+    db.add(db_palette)
+    db.commit()
+    return db_palette
+
+
+@router.put("/palette/{id}", status_code=status.HTTP_200_OK)
+def set_palette(id: int, palette: schema.Palette, user=Depends(get_current_user),
+                db: Session = Depends(get_db)):
+    folder = db.execute(
+        select(model.Folder).where(model.Folder.id == palette.folder_id)).scalars().first()
+    if folder.user_id != user.id:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,
+                            detail="User cannot access parent folder")
+
+    db_palette = model.Palette(**palette.model_dump())
+    existing = db.execute(
+        select(model.Palette).where(model.Palette.id == id)).scalars().first()
+    for key, value in db_palette:
+        setattr(existing, key, value)
+    db.commit()
+
+
+@router.delete("/palette/{id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_palette(id: int, user=Depends(get_current_user),
+                   db: Session = Depends(get_db)):
+    palette = db.execute(
+        select(model.Palette).where(model.Palette.id == id)).scalars().first()
+
+    if palette.user_id != user.id:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,
+                            detail="Cannot delete other users palette")
+    db.execute(
+        delete(model.Color).where(model.Color.palette_id == id))
+    db.delete(palette)
+    db.commit()
 
 
 @router.get("/user_palettes", status_code=status.HTTP_200_OK)
@@ -117,7 +222,7 @@ def get_folder(id: int, user=Depends(get_current_user),
     }
 
 
-@router.post("/root", status_code=status.HTTP_200_OK)
+@router.get("/root", status_code=status.HTTP_200_OK)
 def get_root(user=Depends(get_current_user),
              db: Session = Depends(get_db)):
 

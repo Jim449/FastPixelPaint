@@ -4,6 +4,7 @@ import ToolButton from "src/components/ToolButton";
 import PaletteButton from "src/components/PaletteButton";
 import ColorPicker from "src/components/ColorPicker";
 import MessageWindow from "src/components/MessageWindow";
+import FileSystem from "src/components/FileSystem";
 import { getDot, getLine, getStraightLine, getCircle, getEllipse, fillEllipse, getRectangle, fillRectangle } from "src/scripts/geometry";
 import { Drawing, PaletteColor } from "src/scripts/drawing";
 import { authStore } from "src/store/authStore";
@@ -219,6 +220,7 @@ export default function Paint() {
         }
         catch (error) {
             console.log(error);
+            setFile(null);
             setMessage("An error occurred when attempting to save palette.");
         }
     }
@@ -605,7 +607,7 @@ export default function Paint() {
 
     return <div className="flex flex-col min-h-screen max-h-screen bg-gray-50">
         {message && <MessageWindow action={(event) => setMessage("")}>{message}</MessageWindow>}
-        {file && <div className="absolute z-30 h-80 w-80 top-[50%] left-[50%] translate-[-50%]">
+        {file && <div className="absolute z-30 h-96 w-96 top-[50%] left-[50%] translate-[-50%]">
             <FileSystem
                 mode={file.mode}
                 action={file.action}

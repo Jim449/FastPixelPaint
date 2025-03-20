@@ -1,60 +1,75 @@
-export function getDot(x, y) {
-    return [{ x: x, y: y }];
+export function getDot(x1, y1, width = 1) {
+    let coordinates = [];
+
+    for (x = x1; x < x1 + width; x++) {
+        for (y = y1; y < y1 + width; y++) {
+            coordinates.push({ x: x, y: y })
+        }
+    }
+    return coordinates;
 }
 
 
-export function getHorizontalLine(x1, y1, dx) {
+export function getHorizontalLine(x1, y1, dx, width = 1) {
     // Draws a horizontal line from (x1, y1) with length dx
     let coordinates = [];
 
     for (let x = x1; x <= x1 + dx; x++) {
-        coordinates.push({ x: x, y: y1 });
+        for (let w = 0; w < width; w++) {
+            coordinates.push({ x: x, y: y1 + w });
+        }
     }
     return coordinates;
 }
 
 
-export function getVerticalLine(x1, y1, dy) {
+export function getVerticalLine(x1, y1, dy, width = 1) {
     // Draws a vertical line from (x1, y1) with length dy
     let coordinates = [];
 
     for (let y = y1; y <= y1 + dy; y++) {
-        coordinates.push({ x: x1, y: y });
+        for (let w = 0; w < width; w++) {
+            coordinates.push({ x: x1 + w, y: y });
+        }
     }
     return coordinates;
 }
 
 
-function getXLine(x1, y1, dx, slope) {
+function getXLine(x1, y1, dx, slope, width = 1) {
     // Returns a line starting at (x1, y1), proceeding dx steps in x-direction with given y-slope
 
     if (slope == 0) {
-        return getHorizontalLine(x1, y1, dx);
+        return getHorizontalLine(x1, y1, dx, width);
     }
-    let coordinates = [{ x: x1, y: y1 }];
+    let coordinates = [];
 
-    for (let step = 1; step <= dx; step++) {
-        coordinates.push({ x: x1 + step, y: Math.round(y1 + step * slope) });
+    for (let step = 0; step <= dx; step++) {
+        for (let w = 0; w < width; w++) {
+            coordinates.push({ x: x1 + step, y: Math.round(y1 + step * slope) + w });
+        }
     }
     return coordinates;
 }
 
 
-function getYLine(x1, y1, dy, slope) {
+function getYLine(x1, y1, dy, slope, width = 1) {
     // Returns a line starting at (x1, y1), proceeding dy steps in y-direction with given x-slope
     if (slope == 0) {
         return getVerticalLine(x1, y1, dy);
     }
-    let coordinates = [{ x: x1, y: y1 }];
+    let coordinates = [];
 
-    for (let step = 1; step <= dy; step++) {
-        coordinates.push({ x: Math.round(x1 + step * slope), y: y1 + step });
+    for (let step = 0; step <= dy; step++) {
+        for (let w = 0; w < width; w++) {
+            coordinates.push({ x: Math.round(x1 + step * slope) + w, y: y1 + step });
+        }
     }
     return coordinates;
 }
 
 
-export function getLine(x1, y1, x2, y2) {
+export function getLine(x1, y1, x2, y2, width = 1) {
     // Draws a line between two points
     let dx = x2 - x1;
     let dy = y2 - y1;
@@ -63,26 +78,26 @@ export function getLine(x1, y1, x2, y2) {
         let slope = dy / dx;
 
         if (dx > 0) {
-            return getXLine(x1, y1, dx, slope);
+            return getXLine(x1, y1, dx, slope, width);
         }
         else {
-            return getXLine(x2, y2, -dx, slope);
+            return getXLine(x2, y2, -dx, slope, width);
         }
     }
     else {
         let slope = dx / dy;
 
         if (dy > 0) {
-            return getYLine(x1, y1, dy, slope);
+            return getYLine(x1, y1, dy, slope, width);
         }
         else {
-            return getYLine(x2, y2, -dy, slope);
+            return getYLine(x2, y2, -dy, slope, width);
         }
     }
 }
 
 
-export function getStraightLine(x1, y1, x2, y2) {
+export function getStraightLine(x1, y1, x2, y2, width = 1) {
     // Given two points (x1, y1) and (x2, y2), 
     // draws a horizontal line to (x2, y1)
     // or a vertical line to (x1, y2),
@@ -92,40 +107,40 @@ export function getStraightLine(x1, y1, x2, y2) {
 
     if (Math.abs(dx) > Math.abs(dy)) {
         if (dx > 1) {
-            return getHorizontalLine(x1, y1, dx);
+            return getHorizontalLine(x1, y1, dx, width);
         }
         else {
-            return getHorizontalLine(x2, y1, -dx);
+            return getHorizontalLine(x2, y1, -dx, width);
         }
     }
     else {
         if (dy > 1) {
-            return getVerticalLine(x1, y1, dy);
+            return getVerticalLine(x1, y1, dy, width);
         }
         else {
-            return getVerticalLine(x1, y2, -dy);
+            return getVerticalLine(x1, y2, -dy, width);
         }
     }
 }
 
 
-export function getRectangle(x1, y1, x2, y2) {
+export function getRectangle(x1, y1, x2, y2, width = 1) {
     // Returns the outline of a rectangle
     // with upper left corner (x1, y1)
     // and lower right corner (x2, y2)
     let minX = Math.min(x1, x2);
-    let maxX = Math.max(x1, x2);
+    let maxX = Math.max(x1, x2) + 1 - width;
     let minY = Math.min(y1, y2);
-    let maxY = Math.max(y1, y2);
+    let maxY = Math.max(y1, y2) + 1 - width;
     let dx = maxX - minX;
-    let dy = maxY - minY - 2;
+    let dy = maxY - minY - 2 * width;
 
-    let coordinates = getHorizontalLine(minX, minY, dx);
-    coordinates = coordinates.concat(getHorizontalLine(minX, maxY, dx));
+    let coordinates = getHorizontalLine(minX, minY, dx, width);
+    coordinates = coordinates.concat(getHorizontalLine(minX, maxY, dx, width));
 
     if (dy >= 0) {
-        coordinates = coordinates.concat(getVerticalLine(minX, minY + 1, maxY - minY - 2));
-        coordinates = coordinates.concat(getVerticalLine(maxX, minY + 1, maxY - minY - 2));
+        coordinates = coordinates.concat(getVerticalLine(minX, minY + width, dy, width));
+        coordinates = coordinates.concat(getVerticalLine(maxX, minY + width, dy, width));
     }
     return coordinates;
 }
@@ -146,7 +161,7 @@ export function fillRectangle(x1, y1, x2, y2) {
 }
 
 
-export function getCircle(x1, y1, x2, y2) {
+export function getCircle(x1, y1, x2, y2, width = 1) {
     // Draws a circle. The coordinates must form a square
     let radius = (Math.max(x1, x2) - Math.min(x1, x2)) / 2;
 
@@ -171,19 +186,21 @@ export function getCircle(x1, y1, x2, y2) {
         yQuota = y / radius;
         x = Math.cos(Math.asin(yQuota)) * radius;
 
-        coordinates.push({ x: Math.round(centerX + x), y: Math.round(centerY + y) });
-        coordinates.push({ x: Math.round(centerX + x), y: Math.round(centerY - y) });
-        coordinates.push({ x: Math.round(centerX - x), y: Math.round(centerY + y) });
-        coordinates.push({ x: Math.round(centerX - x), y: Math.round(centerY - y) });
-        coordinates.push({ x: Math.round(centerX + y), y: Math.round(centerY + x) });
-        coordinates.push({ x: Math.round(centerX - y), y: Math.round(centerY + x) });
-        coordinates.push({ x: Math.round(centerX + y), y: Math.round(centerY - x) });
-        coordinates.push({ x: Math.round(centerX - y), y: Math.round(centerY - x) });
+        for (let w = 0; w < width; w++) {
+            coordinates.push({ x: Math.round(centerX + x) - w, y: Math.round(centerY + y) });
+            coordinates.push({ x: Math.round(centerX + x) - w, y: Math.round(centerY - y) });
+            coordinates.push({ x: Math.round(centerX - x) + w, y: Math.round(centerY + y) });
+            coordinates.push({ x: Math.round(centerX - x) + w, y: Math.round(centerY - y) });
+            coordinates.push({ x: Math.round(centerX + y), y: Math.round(centerY + x) - w });
+            coordinates.push({ x: Math.round(centerX - y), y: Math.round(centerY + x) - w });
+            coordinates.push({ x: Math.round(centerX + y), y: Math.round(centerY - x) + w });
+            coordinates.push({ x: Math.round(centerX - y), y: Math.round(centerY - x) + w });
+        }
     }
     return coordinates;
 }
 
-export function getEllipse(x1, y1, x2, y2) {
+export function getEllipse(x1, y1, x2, y2, width = 1) {
     // Draws an ellipse
     let radiusX = (Math.max(x1, x2) - Math.min(x1, x2)) / 2;
     let radiusY = (Math.max(y1, y2) - Math.min(y1, y2)) / 2;
@@ -215,20 +232,24 @@ export function getEllipse(x1, y1, x2, y2) {
         yQuota = yStep / radiusY;
         x = Math.cos(Math.asin(yQuota)) * radiusX;
 
-        coordinates.push({ x: Math.round(centerX + x), y: Math.round(centerY + yStep) });
-        coordinates.push({ x: Math.round(centerX + x), y: Math.round(centerY - yStep) });
-        coordinates.push({ x: Math.round(centerX - x), y: Math.round(centerY + yStep) });
-        coordinates.push({ x: Math.round(centerX - x), y: Math.round(centerY - yStep) });
+        for (let w = 0; w < width; w++) {
+            coordinates.push({ x: Math.round(centerX + x) - w, y: Math.round(centerY + yStep) });
+            coordinates.push({ x: Math.round(centerX + x) - w, y: Math.round(centerY - yStep) });
+            coordinates.push({ x: Math.round(centerX - x) + w, y: Math.round(centerY + yStep) });
+            coordinates.push({ x: Math.round(centerX - x) + w, y: Math.round(centerY - yStep) });
+        }
     }
 
     for (let xStep = startX; xStep <= radiusX; xStep++) {
         xQuota = xStep / radiusX;
         y = Math.sin(Math.acos(xQuota)) * radiusY;
 
-        coordinates.push({ x: Math.round(centerX + xStep), y: Math.round(centerY + y) });
-        coordinates.push({ x: Math.round(centerX + xStep), y: Math.round(centerY - y) });
-        coordinates.push({ x: Math.round(centerX - xStep), y: Math.round(centerY + y) });
-        coordinates.push({ x: Math.round(centerX - xStep), y: Math.round(centerY - y) });
+        for (let w = 0; w < width; w++) {
+            coordinates.push({ x: Math.round(centerX + xStep), y: Math.round(centerY + y) - w });
+            coordinates.push({ x: Math.round(centerX + xStep), y: Math.round(centerY - y) + w });
+            coordinates.push({ x: Math.round(centerX - xStep), y: Math.round(centerY + y) - w });
+            coordinates.push({ x: Math.round(centerX - xStep), y: Math.round(centerY - y) + w });
+        }
     }
 
     return coordinates;
@@ -347,31 +368,31 @@ export function drawFromZero(shape, startX, startY, currentX, currentY,
     // TODO add stroke width.
     // Add dithering patterns which prevents certain coordinates from being drawn on
     if (shape == "Pencil") {
-        return getLine(startX, startY, currentX, currentY);
+        return getLine(startX, startY, currentX, currentY, width);
     }
     else if (shape == "Dotter") {
-        return getDot(currentX, currentY);
+        return getDot(currentX, currentY, width);
     }
     else if (shape == "Line") {
         if (shiftDown) {
             return getStraightLine(
                 getLineStart(startX, currentX), getLineStart(startY, currentY),
-                getLineEnd(startX, currentX), getLineEnd(startY, currentY));
+                getLineEnd(startX, currentX), getLineEnd(startY, currentY), width);
         }
         else {
             return getLine(
                 getLineStart(startX, currentX), getLineStart(startY, currentY),
-                getLineEnd(startX, currentX), getLineEnd(startY, currentY));
+                getLineEnd(startX, currentX), getLineEnd(startY, currentY), width);
         }
     }
     else if (shape == "Rectangle") {
         if (shiftDown) {
             let distance = getMinLength(startX, startY, currentX, currentY) - 1;
-            return getRectangle(0, 0, distance, distance);
+            return getRectangle(0, 0, distance, distance, width);
         }
         else {
             return getRectangle(0, 0,
-                getLength(startX, currentX) - 1, getLength(startY, currentY) - 1);
+                getLength(startX, currentX) - 1, getLength(startY, currentY) - 1, width);
         }
     }
     else if (shape == "Fill rectangle") {
@@ -387,17 +408,17 @@ export function drawFromZero(shape, startX, startY, currentX, currentY,
     else if (shape == "Ellipse") {
         if (shiftDown) {
             let distance = getMinLength(startX, startY, currentX, currentY) - 1;
-            return getCircle(0, 0, distance, distance);
+            return getCircle(0, 0, distance, distance, width);
         }
         else {
             return getEllipse(0, 0,
-                getLength(startX, currentY) - 1, getLength(startY, currentY) - 1);
+                getLength(startX, currentY) - 1, getLength(startY, currentY) - 1, width);
         }
     }
     else if (shape == "Fill ellipse") {
         if (shiftDown) {
             let distance = getMinLength(startX, startY, currentX, currentY) - 1;
-            return fillCircle(0, 0, distance, distance);
+            return fillEllipse(0, 0, distance, distance);
         }
         else {
             return fillEllipse(0, 0,
@@ -412,10 +433,10 @@ export function getDrawingArea(shape, startX, startY, currentX, currentY, width)
     // TODO add width
     if (shape == "Pencil" || shape == "Line") {
         return [getStart(startX, currentX), getStart(startY, currentY),
-        getLength(startX, currentX), getLength(startY, currentY)];
+        getLength(startX, currentX) + width, getLength(startY, currentY) + width];
     }
     else if (shape == "Dotter") {
-        return [getStart(startX, currentX), getStart(startY, currentY), 1, 1];
+        return [getStart(startX, currentX), getStart(startY, currentY), width, width];
     }
     else if (shape == "Rectangle" || shape == "Fill rectangle"
         || shape == "Ellipse" || shape == "Fill ellipse") {

@@ -6,7 +6,7 @@ const loadInitialState = () => {
     const rootId = localStorage.getItem("rootId") || null;
     const userData = JSON.parse(localStorage.getItem("userData")) || null;
 
-    return { token: token, folderId: folderId, rootId: rootId, userData };
+    return { token: token, folderId: folderId, rootId: rootId, userData, imageId: null, paletteId: null };
 };
 
 export const authStore = create((set, get) => ({
@@ -15,14 +15,20 @@ export const authStore = create((set, get) => ({
         localStorage.setItem("token", token);
         set(() => ({ token: token }));
     },
-    setFolder: (folder) => {
-        localStorage.setItem("folderId", folder);
-        set(() => ({ folderId: folder }));
+    setFolder: (folderId) => {
+        localStorage.setItem("folderId", folderId);
+        set(() => ({ folderId: folderId }));
     },
-    setRoot: (root) => {
-        localStorage.setItem("folderId", root);
-        localStorage.setItem("rootId", root);
-        set(() => ({ folderId: root, rootId: root }));
+    setRoot: (rootId) => {
+        localStorage.setItem("folderId", rootId);
+        localStorage.setItem("rootId", rootId);
+        set(() => ({ folderId: rootId, rootId: rootId }));
+    },
+    setImage: (imageId) => {
+        set(() => ({ imageId: imageId }));
+    },
+    setPalette: (paletteId) => {
+        set(() => ({ paletteId: paletteId }));
     },
     logout: async () => {
         try {
