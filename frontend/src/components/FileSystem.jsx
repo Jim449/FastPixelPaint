@@ -122,10 +122,10 @@ export default function FileSystem({ mode, action, onCancel }) {
         else if (selected.type === "Folder" || selected.type === "Parent folder") {
             openFolder(token, selected.id);
         }
-        else if ((!mode || mode === "Open image") && selected.type === "Image") {
+        else if ((mode === "Open image" || mode === "Open") && selected.type === "Image") {
             action(selected);
         }
-        else if ((!mode || mode === "Open palette") && selected.type === "Palette") {
+        else if ((mode === "Open palette" || mode === "Open") && selected.type === "Palette") {
             action(selected);
         }
     }

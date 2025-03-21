@@ -285,20 +285,15 @@ export default function Paint() {
     function modifyPrimaryColor(red, green, blue, index, order) {
         // Changes the primary color
         // Applies to palette and drawings
-        // TODO: should change colors in the image
         red = Math.max(Math.min(Number(red), 255), 0);
         green = Math.max(Math.min(Number(green), 255), 0);
         blue = Math.max(Math.min(Number(blue), 255), 0);
-
-        let newPalette = [...palette];
         let color = rgbToHex(red, green, blue);
 
-        newPalette[order] = {
-            color: color,
-            index: index,
-            order: order
-        };
-        setPalette(newPalette);
+        drawing.current.changeColor(canvasRef.current.getContext("2d"),
+            index, order, red, green, blue);
+
+        setPalette(drawing.current.palette.getColors());
 
         if (activeTool.current.colorIndex === index) activeTool.current.color = color;
     }
@@ -306,19 +301,20 @@ export default function Paint() {
     function modifySecondaryColor(red, green, blue, index, order) {
         // Changes the secondary color
         // Applies to palette and drawings
-        // TODO: should change colors in the image
         red = Math.max(Math.min(Number(red), 255), 0);
         green = Math.max(Math.min(Number(green), 255), 0);
         blue = Math.max(Math.min(Number(blue), 255), 0);
-
-        let newPalette = [...palette];
         let color = rgbToHex(red, green, blue);
-        newPalette[order] = {
-            color: color,
-            index: index,
-            order: order
-        };
-        setPalette(newPalette);
+
+        // let newPalette = [...palette];
+        // newPalette[order] = {
+        //     color: color,
+        //     index: index,
+        //     order: order
+        // };
+        drawing.current.changeColor(canvasRef.current.getContext("2d"),
+            index, order, red, green, blue);
+        setPalette(drawing.current.palette.getColors());
 
         if (activeTool.current.colorIndex === index) activeTool.current.color = color;
     }
@@ -576,11 +572,14 @@ export default function Paint() {
         window.oncontextmenu = (event) => { event.preventDefault() }
 
         // Had to do async or I'd just get a promise
+        // Or I could just move back getPalette again
         const fetchPalette = async () => {
             let paletteObject = await getPalette(null, token);
             let colors = paletteObject.getColors();
             drawing.current.palette = paletteObject;
             setPalette(colors);
+            // The primary and secondary colors have to be fetched from the palette
+            // Color 0 and 7 are kind of random but they'll do for now
             setPrimaryColor(new PaletteColor(colors[0].red, colors[0].green, colors[0].blue,
                 colors[0].index, colors[0].order));
             setSecondaryColor(new PaletteColor(colors[7].red, colors[7].green,
@@ -589,6 +588,10 @@ export default function Paint() {
                 colors[0].index, colors[0].order);
             secondaryCRef.current = new PaletteColor(colors[7].red, colors[7].green,
                 colors[7].blue, colors[7].index, colors[7].order);
+
+            // I don't need to draw but I do need to set that willReadFrequently option
+            // If I don't do that now it might be too late
+            let context = canvasRef.current.getContext("2d", { willReadFrequently: true });
         }
         fetchPalette();
 

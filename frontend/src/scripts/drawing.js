@@ -56,6 +56,7 @@ export class Palette {
     }
 
     getColors() {
+        // Returns a list of color objects, with hex codes calculated
         return this.colors.map((item) => ({
             index: item.index,
             order: item.order,
@@ -64,6 +65,18 @@ export class Palette {
             blue: item.blue,
             color: rgbToHex(item.red, item.green, item.blue)
         }));
+    }
+
+    getColorOfIndex(index) {
+        // Returns a color
+        let position = this.colors.findIndex((item) => (item.index == index));
+        return this.colors[position];
+    }
+
+    setColor(index, order, red, green, blue) {
+        // Sets a color
+        let position = this.colors.findIndex((item) => (item.index == index));
+        this.colors[position] = { index: index, order: order, red: red, green: green, blue, blue };
     }
 }
 
@@ -156,6 +169,25 @@ export class ImageLayer {
             this.colorSet.push(colorIndex);
         }
     }
+
+    getColorCoordinates(colorIndex) {
+        // Searches the layer for a specific color.
+        // Returns a list of coordinates
+        // Note: the color to search for must be included in the colorSet
+        // and if the color isn't found, it is removed from the colorSet
+        if (!this.colorSet.includes(colorIndex)) return [];
+
+        let result = [];
+
+        this.indexedColors.forEach((item, index) => {
+            if (item == colorIndex) result.push(index);
+        });
+
+        if (result.length == 0) {
+            this.colorSet = this.colorSet.filter((item) => { item != colorIndex });
+        }
+        return result;
+    }
 }
 
 
@@ -243,7 +275,7 @@ export class Drawing {
                 data[dataIndex] = activeTool.red;
                 data[dataIndex + 1] = activeTool.green;
                 data[dataIndex + 2] = activeTool.blue;
-                data[dataIndex + 3] = 255;
+                data[dataIndex + 3] = activeTool.alpha;
             }
             this.image.draw(coordinates.x, coordinates.y, activeTool.colorIndex);
         });
@@ -278,15 +310,8 @@ export class Drawing {
     }
 
 
-    isColor(data, coordinates, red, green, blue, alpha) {
-        return (data[coordinates] == red
-            && data[coordinates + 1] == green
-            && data[coordinates + 2] == blue
-            && data[coordinates + 3] == alpha);
-    }
-
-
     setColor(data, coordinates, red, green, blue, alpha) {
+        // Paints a canvas imageData
         data[coordinates] = red;
         data[coordinates + 1] = green;
         data[coordinates + 2] = blue;
@@ -326,9 +351,6 @@ export class Drawing {
                 }
             });
         }
-        // Finally drawing something!
-        // But it's slow...
-        // I should be able to skip one of the lists
         context.putImageData(imageData, 0, 0);
         this.image.addToColorSet(tool.colorIndex);
     }
@@ -345,7 +367,7 @@ export class Drawing {
             data[dataIndex] = activeTool.red;
             data[dataIndex + 1] = activeTool.green;
             data[dataIndex + 2] = activeTool.blue;
-            data[dataIndex + 3] = 255;
+            data[dataIndex + 3] = activeTool.alpha;
         });
         context.putImageData(imageData, startX, startY);
 
@@ -452,5 +474,39 @@ export class Drawing {
             imageData[dataIndex + 3] = action.alpha;
         });
         context.putImageData(imageData, action.x, action.y);
+    }
+
+
+    buildImage(context) {
+        // Paints a canvas using image indexed colors,
+        // refering to the current palette
+        let imageData = context.getImageData(0, 0, this.width, this.height);
+        let data = imageData.data;
+        let color;
+
+        this.image.indexedColors.forEach((item, index) => {
+            if (item == -1) {
+                this.setColor(data, index * 4, 0, 0, 0, 0);
+            }
+            else {
+                color = this.palette.getColorOfIndex(item);
+                this.setColor(data, index * 4, color.red, color.green, color.blue, 255);
+            }
+        });
+        context.putImageData(imageData, 0, 0);
+    }
+
+    changeColor(context, index, order, red, green, blue) {
+        // Changes a color in the palette
+        // Paints the canvas accordingly
+        let imageData = context.getImageData(0, 0, this.width, this.height);
+        let data = imageData.data;
+        let coordinates = this.image.getColorCoordinates(index);
+        this.palette.setColor(index, order, red, green, blue);
+
+        coordinates.forEach((position) => {
+            this.setColor(data, position * 4, red, green, blue, 255);
+        });
+        context.putImageData(imageData, 0, 0);
     }
 }

@@ -13,5 +13,5 @@ export default function Files() {
         // Make sure the right palette and image is opened
     }
 
-    return <FileSystem mode={null} action={testOpen} onCancel={null}></FileSystem>
+    return <FileSystem mode={"Open"} action={testOpen} onCancel={null}></FileSystem>
 }
