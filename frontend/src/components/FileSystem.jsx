@@ -133,7 +133,6 @@ export default function FileSystem({ mode, action, onCancel }) {
 
     function handleDoubleClick(item) {
         // Opens or overwrites the selected item
-        // TODO will only open at this point. Overwrite should have prompt?
         selected = item;
         if (!mode || mode.includes("Open")) handleOpen(null);
     }
@@ -226,10 +225,10 @@ export default function FileSystem({ mode, action, onCancel }) {
         <table className="m-2 overflow-y-scroll">
             <thead>
                 <tr className="flex bg-gray-100 border-b-1 border-gray-300 text-sm">
-                    <th className="m-2 w-20">Type</th>
+                    <th className="m-2 w-24">Type</th>
                     <th className="m-2 grow">Name</th>
-                    <th className="m-2 w-20">Size</th>
-                    <th className="m-2 w-20">Updated</th>
+                    <th className="m-2 w-24">Size</th>
+                    <th className="m-2 w-24">Updated</th>
                 </tr>
             </thead>
             <tbody>
@@ -239,10 +238,10 @@ export default function FileSystem({ mode, action, onCancel }) {
                     onDoubleClick={(event) => openFolder(token, activeFolder.parent_id)}
                     tabIndex={-1}
                     key={"go-up"}>
-                    <td className="m-1 w-20">Folder</td>
+                    <td className="m-1 w-24">Folder</td>
                     <td className="m-1 grow overflow-ellipsis">[Go up] {parentFolder?.name}</td>
-                    <td className="m-1 w-20"></td>
-                    <td className="m-1 w-20"></td>
+                    <td className="m-1 w-24"></td>
+                    <td className="m-1 w-24"></td>
                 </tr>}
                 {folders.map((item) => <tr
                     className="flex border-b-1 border-gray-200 focus:bg-blue-100 text-sm"
@@ -250,10 +249,10 @@ export default function FileSystem({ mode, action, onCancel }) {
                     onDoubleClick={(event) => openFolder(token, item.id)}
                     tabIndex={-1}
                     key={"row-" + item.path}>
-                    <td className="m-1 w-20">Folder</td>
+                    <td className="m-1 w-24">Folder</td>
                     <td className="m-1 grow overflow-ellipsis">{item.name}</td>
-                    <td className="m-1 w-20"></td>
-                    <td className="m-1 w-20"></td>
+                    <td className="m-1 w-24"></td>
+                    <td className="m-1 w-24"></td>
                 </tr>)}
                 {images.map((item) => <tr
                     className="flex border-b-1 border-gray-200 focus:bg-blue-100 text-sm"
@@ -261,10 +260,10 @@ export default function FileSystem({ mode, action, onCancel }) {
                     onClick={(event) => select(item)}
                     onDoubleClick={(event) => handleDoubleClick(item)}
                     tabIndex={-1}>
-                    <td className="m-1 w-20">Image</td>
+                    <td className="m-1 w-24">Image</td>
                     <td className="m-1 grow overflow-ellipsis">{item.name}</td>
-                    <td className="m-1 w-20">{item.width}x{item.height}</td>
-                    <td className="m-1 w-20">{item.updated}</td>
+                    <td className="m-1 w-24">{item.width}x{item.height}</td>
+                    <td className="m-1 w-24">{new Date(item.updated).toDateString()}</td>
                 </tr>)}
                 {palettes.map((item) => <tr
                     className="flex border-b-1 border-gray-200 focus:bg-blue-100 text-sm"
@@ -272,10 +271,10 @@ export default function FileSystem({ mode, action, onCancel }) {
                     onClick={(event) => select(item)}
                     onDoubleClick={(event) => handleDoubleClick(item)}
                     tabIndex={-1}>
-                    <td className="m-1 w-20">Palette</td>
+                    <td className="m-1 w-24">Palette</td>
                     <td className="m-1 grow overflow-ellipsis">{item.name}</td>
-                    <td className="m-1 w-20">(add size later)</td>
-                    <td className="m-1 w-20">{item.updated}</td>
+                    <td className="m-1 w-24">(add later)</td>
+                    <td className="m-1 w-24">{new Date(item.updated).toDateString()}</td>
                 </tr>)}
             </tbody>
         </table>

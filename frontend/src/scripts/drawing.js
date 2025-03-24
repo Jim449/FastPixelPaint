@@ -120,7 +120,7 @@ export class History {
 }
 
 export class ImageLayer {
-    constructor(drawing, canvas, x, y, width, height, order) {
+    constructor(drawing, canvas, x, y, width, height, order, id = null) {
         this.drawing = drawing;
         this.canvas = canvas;
         this.x = x;
@@ -128,6 +128,7 @@ export class ImageLayer {
         this.width = width;
         this.height = height;
         this.order = order;
+        this.id = id;
         this.visible = true;
         this.indexedColors = [];
         this.colorSet = [-1];
@@ -192,9 +193,10 @@ export class ImageLayer {
 
 
 export class Drawing {
-    constructor(width, height) {
+    constructor(width, height, id = null) {
         this.width = width;
         this.height = height;
+        this.id = id;
         this.layers = [];
         this.history = [];
         this.historyIndex = -1;

@@ -141,6 +141,41 @@ export default function Paint() {
     }
 
 
+    async function saveLayer(layer, token, method) {
+        // Saves the image layer
+        try {
+            let path;
+
+            if (method === "PUT") path = `http://localhost:8000/v1/layer/${layer.id}`;
+            else if (method === "POST") path = `http://localhost:8000/v1/layer`;
+            else return;
+
+            const response = await fetch(path,
+                {
+                    method: method,
+                    headers: {
+                        "Authorization": `Bearer ${token}`,
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify(layer)
+                });
+            const data = await response.json();
+
+            if (response.ok) {
+                setFile(null);
+                setMessage("Image saved successfully!");
+                drawing.current.image.id = data.id;
+                return data;
+            }
+            else throw new Error("Error when saving image");
+        }
+        catch (error) {
+            console.log(error);
+            setFile(null);
+            setMessage("An error occurred when attempting to save image.");
+        }
+    }
+
     async function saveImage(image, token, method) {
         // Saves the current image
         try {
@@ -162,14 +197,14 @@ export default function Paint() {
             const data = await response.json();
 
             if (response.ok) {
-                setMessage("Image saved successfully!");
                 drawing.current.id = data.id;
-                return data;
+                saveLayer(image.image, token, method);
             }
             else throw new Error("Error when saving image");
         }
         catch (error) {
             console.log(error);
+            setFile(null);
             setMessage("An error occurred when attempting to save image.");
         }
     }
@@ -191,13 +226,55 @@ export default function Paint() {
         });
     }
 
+
+    async function saveColors(colors, token, method, paletteId) {
+        // Saves the current palette colors
+        try {
+            let path;
+
+            if (method === "PUT") path = `http://localhost:8000/v1/colors/${paletteId}`;
+            else if (method === "POST") {
+                path = `http://localhost:8000/v1/colors/${paletteId}`;
+                palette.universal = false;
+            }
+            else return;
+
+            const response = await fetch(path,
+                {
+                    method: method,
+                    headers: {
+                        "Authorization": `Bearer ${token}`,
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify(colors)
+                });
+            const data = await response.json();
+
+            if (response.ok) {
+                setFile(null);
+                setMessage("Palette saved successfully!");
+            }
+            else throw new Error("Error when saving palette");
+        }
+        catch (error) {
+            console.log(error);
+            setFile(null);
+            setMessage("An error occurred when attempting to save palette.");
+        }
+    }
+
+
     async function savePalette(palette, token, method) {
         // Saves the current palette
         try {
             let path;
 
             if (method === "PUT") path = `http://localhost:8000/v1/palette/${palette.id}`;
-            else if (method === "POST") path = `http://localhost:8000/v1/palette`;
+            else if (method === "POST") {
+                path = `http://localhost:8000/v1/palette`;
+                palette.universal = false;
+                palette.default_palette = false;
+            }
             else return;
 
             const response = await fetch(path,
@@ -212,8 +289,8 @@ export default function Paint() {
             const data = await response.json();
 
             if (response.ok) {
-                setMessage("Palette saved successfully!");
-                drawing.current.palette.id = data.id;
+                palette.id = data.id;
+                saveColors(palette.colors, token, method, data.id);
                 return data;
             }
             else throw new Error("Error when saving palette");
@@ -610,7 +687,7 @@ export default function Paint() {
 
     return <div className="flex flex-col min-h-screen max-h-screen bg-gray-50">
         {message && <MessageWindow action={(event) => setMessage("")}>{message}</MessageWindow>}
-        {file && <div className="absolute z-30 h-96 w-96 top-[50%] left-[50%] translate-[-50%]">
+        {file && <div className="absolute z-30 h-[480px] w-[480px] top-[50%] left-[50%] translate-[-50%]">
             <FileSystem
                 mode={file.mode}
                 action={file.action}

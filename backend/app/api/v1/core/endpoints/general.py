@@ -2,7 +2,7 @@ from app.db_setup import get_db
 from app.security import get_current_user, get_current_token, get_user_or_none, oauth2_scheme
 import app.api.v1.core.models as model
 import app.api.v1.core.schemas as schema
-from typing import Annotated
+from typing import Annotated, List
 from fastapi import APIRouter, Depends, FastAPI, HTTPException, Request, status
 from sqlalchemy import delete, insert, select, update
 from sqlalchemy.orm import Session, joinedload, selectinload
@@ -23,6 +23,7 @@ def get_image(id: int, user=Depends(get_user_or_none),
     """Returns an image owned by the current user"""
     image = db.execute(
         select(model.Image)
+        .options(joinedload(model.Layer))
         .where(model.Image.id == id)
         .where(model.Image.user_id == user.id)).scalars().first()
     if image == None:
@@ -32,7 +33,7 @@ def get_image(id: int, user=Depends(get_user_or_none),
 
 
 @router.post("/image", status_code=status.HTTP_201_CREATED)
-def create_image(image: schema.Image, layer: schema.Layer,
+def create_image(image: schema.Image,
                  user=Depends(get_user_or_none), db: Session = Depends(get_db)):
     folder = db.execute(
         select(model.Folder).where(model.Folder.id == image.folder_id)).scalars().first()
@@ -40,12 +41,46 @@ def create_image(image: schema.Image, layer: schema.Layer,
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,
                             detail="User cannot access parent folder")
 
-    db_image = model.Palette(**image.model_dump())
-    db_layer = model.Layer(**layer.model_dump())
-    setattr(db_image, "layers", [db_layer])
+    db_image = model.Image(**image.model_dump())
     db.add(db_image)
     db.commit()
     return db_image
+
+
+@router.put("/image/{id}", status_code=status.HTTP_200_OK)
+def set_image(id, image: schema.Image,
+              user=Depends(get_user_or_none), db: Session = Depends(get_db)):
+    folder = db.execute(
+        select(model.Folder).where(model.Folder.id == image.folder_id)).scalars().first()
+    if folder.user_id != user.id:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,
+                            detail="User cannot access parent folder")
+
+    db_image = model.Image(**image.model_dump())
+    existing_image = db.execute(
+        select(model.Image).where(model.Image.id == id)).scalars().first()
+    for key, value in db_image:
+        setattr(existing_image, key, value)
+    db.commit()
+    return db_image
+
+
+@router.post("/layer", status_code=status.HTTP_201_CREATED)
+def create_layer(layer: schema.Layer,
+                 user=Depends(get_user_or_none), db: Session = Depends(get_db)):
+
+    folder = db.execute(
+        select(model.Folder)
+        .where(model.Image.id == layer.image_id)
+        .join(model.Image, model.Image.folder_id == model.Folder.id)).scalars().first()
+    if folder.user_id != user.id:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,
+                            detail="User does not own image")
+
+    db_layer = model.Layer(**layer.model_dump())
+    db.add(db_layer)
+    db.commit()
+    return db_layer
 
 
 @router.put("/image/{id}", status_code=status.HTTP_200_OK)
@@ -57,20 +92,34 @@ def set_image(id, image: schema.Image, layer: schema.Layer,
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,
                             detail="User cannot access parent folder")
 
-    db_image = model.Palette(**image.model_dump())
-    db_layer = model.Layer(**layer.model_dump())
+    db_image = model.Image(**image.model_dump())
     existing_image = db.execute(
         select(model.Image).where(model.Image.id == id)).scalars().first()
-    existing_layer = db.execute(
-        select(model.Layer).where(model.Layer.image_id == id)).scalars().first()
-
     for key, value in db_image:
         setattr(existing_image, key, value)
-    for key, value in db_layer:
-        setattr(existing_layer, key, value)
-
     db.commit()
     return db_image
+
+
+@router.put("/layer/{id}", status_code=status.HTTP_201_CREATED)
+def set_layer(layer: schema.Layer,
+              user=Depends(get_user_or_none), db: Session = Depends(get_db)):
+
+    folder = db.execute(
+        select(model.Folder)
+        .where(model.Image.id == layer.image_id)
+        .join(model.Image, model.Image.folder_id == model.Folder.id)).scalars().first()
+    if folder.user_id != user.id:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,
+                            detail="User does not own image")
+
+    db_layer = model.Layer(**layer.model_dump())
+    existing_layer = db.execute(
+        select(model.Layer).where(model.Layer.id == id)).scalars().first()
+    for key, value in db_layer:
+        setattr(existing_layer, key, value)
+    db.commit()
+    return db_layer
 
 
 @router.delete("/image/{id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -117,9 +166,29 @@ def create_palette(palette: schema.Palette, user=Depends(get_current_user),
                             detail="User cannot access parent folder")
 
     db_palette = model.Palette(**palette.model_dump())
+    db_palette.user_id = user.id
     db.add(db_palette)
     db.commit()
     return db_palette
+
+
+@router.post("/colors/{id}", status_code=status.HTTP_201_CREATED)
+def create_colors(id: int, colors: List[schema.Color], user=Depends(get_current_user),
+                  db: Session = Depends(get_db)):
+    palette = db.execute(
+        select(model.Palette).where(model.Palette.id == id)).scalars().first()
+    if palette.user_id != user.id:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,
+                            detail="User doesn't own palette")
+
+    db_colors = []
+    for color in colors:
+        color_model = model.Color(**color.model_dump())
+        color_model.palette_id = id
+        db_colors.append(color_model)
+    db.add_all(db_colors)
+    db.commit()
+    return db_colors
 
 
 @router.put("/palette/{id}", status_code=status.HTTP_200_OK)
@@ -136,6 +205,7 @@ def set_palette(id: int, palette: schema.Palette, user=Depends(get_current_user)
         select(model.Palette).where(model.Palette.id == id)).scalars().first()
     for key, value in db_palette:
         setattr(existing, key, value)
+    db.palette.user_id = user.id
     db.commit()
 
 
