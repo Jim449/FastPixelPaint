@@ -61,9 +61,6 @@ class Image(Base):
     width: Mapped[int] = mapped_column(Integer)
     height: Mapped[int] = mapped_column(Integer)
     name: Mapped[str] = mapped_column(String)
-    base_name: Mapped[str] = mapped_column(String)
-    order: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
-    version: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
     updated: Mapped[datetime] = mapped_column(
         DateTime, default=lambda: datetime.now())
 
@@ -114,7 +111,7 @@ class Color(Base):
 class Layer(Base):
     __tablename__ = "layers"
     image_id: Mapped[int] = mapped_column(ForeignKey("images.id"))
-    content: Mapped[List[int]] = mapped_column(ARRAY(Integer, dimensions=2))
+    content: Mapped[List[int]] = mapped_column(ARRAY(Integer, dimensions=1))
     order: Mapped[int] = mapped_column(Integer)
 
     image: Mapped["Image"] = relationship(back_populates="layers")

@@ -1,6 +1,17 @@
-from pydantic import BaseModel, Field, ConfigDict, EmailStr
-from typing import List, Optional
+from pydantic import BaseModel, Field, ConfigDict, EmailStr, AfterValidator
+from typing import List, Optional, Annotated
 from datetime import datetime
+import re
+
+
+def validate_password(password: str):
+    if re.search("^[^A-Z]+$", password) != None:
+        raise ValueError("Passwords lacks capital letters")
+    if re.search("^[^0-9]+$", password) != None:
+        raise ValueError("Passwords lacks digits")
+    if re.search("^[\w]+$", password) != None:
+        raise ValueError("Passwords lacks special characters")
+    return password
 
 
 class Token(BaseModel):
@@ -11,8 +22,8 @@ class Token(BaseModel):
 
 class UserRegister(BaseModel):
     email: EmailStr = Field(unique=True)
-    # Regex to enforce numbers / special characters?
-    password: str = Field(min_length=8, max_length=50)
+    password: Annotated[str, AfterValidator(validate_password)] = Field(
+        min_length=8, max_length=50)
     model_config = ConfigDict(from_attributes=True)
 
 
@@ -46,12 +57,6 @@ class Image(BaseModel):
     height: int = Field(min=1, max=10000, description="Image height in pixels")
     name: str = Field(min_length=1, max_length=200,
                       description="Full image name")
-    base_name: str = Field(default=None, max_length=100,
-                           description="Image name without order and version")
-    order: int = Field(
-        default=None, description="Initial number name for ordering, optional")
-    version: int = Field(
-        default=None, description="Ending number name for versioning, optional")
     updated: datetime = Field(default_factory=datetime.now)
     folder_id: int = Field(description="Folder where image is saved")
     palette_id: int = Field(description="Palette used")

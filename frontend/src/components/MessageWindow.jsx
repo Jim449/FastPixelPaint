@@ -6,7 +6,7 @@ export default function MessageWindow({ action, children }) {
             {children}
         </p>
         <button
-            className="text-sm border border-gray-300 py-1 px-2 m-2"
+            className="text-sm border border-gray-300 py-1 px-2 m-2 cursor-pointer"
             onClick={action}>OK
         </button>
     </div>

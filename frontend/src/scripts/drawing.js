@@ -22,29 +22,6 @@ export function hexToColor(code, colorType) {
 }
 
 
-export async function getPalette(id, token) {
-    // Returns a palette with a specific id or the users default palette 
-    try {
-        let path = (id === null) ? "http://localhost:8000/v1/default_palette" : `http://localhost:8000/v1/palette/${id}`;
-
-        const response = await fetch(path,
-            {
-                method: "GET",
-                headers: { Authorization: `Bearer ${token}` },
-            });
-        const data = await response.json();
-
-        if (!response.ok) throw new Error("Error when fetching palette");
-
-        let palette = new Palette(data);
-        return palette;
-    }
-    catch {
-        return false;
-    }
-}
-
-
 export class Palette {
     constructor(palette) {
         this.id = palette.id;
@@ -120,15 +97,14 @@ export class History {
 }
 
 export class ImageLayer {
-    constructor(drawing, canvas, x, y, width, height, order, id = null) {
-        this.drawing = drawing;
-        this.canvas = canvas;
+    constructor(x, y, width, height, order, id = null, image_id = null) {
         this.x = x;
         this.y = y;
         this.width = width;
         this.height = height;
         this.order = order;
         this.id = id;
+        this.image_id = image_id;
         this.visible = true;
         this.indexedColors = [];
         this.colorSet = [-1];
@@ -193,10 +169,16 @@ export class ImageLayer {
 
 
 export class Drawing {
-    constructor(width, height, id = null) {
+    constructor(width, height, id = null, palette_id = null, folder_id = null,
+        image_name = null, order = null, version = null) {
         this.width = width;
         this.height = height;
         this.id = id;
+        this.palette_id = palette_id;
+        this.folder_id = folder_id;
+        this.name = image_name;
+        this.order = order;
+        this.version = version;
         this.layers = [];
         this.history = [];
         this.historyIndex = -1;
@@ -212,48 +194,55 @@ export class Drawing {
         this.savedImageData = null;
     }
 
-    setImage(canvas) {
-        this.image = new ImageLayer(this, canvas, 0, 0, this.width, this.height, 0);
+    setImage() {
+        this.image = new ImageLayer(0, 0, this.width, this.height, 0);
     }
 
-    setPreview(canvas) {
-        this.preview = new ImageLayer(this, canvas, 0, 0, this.width, this.height, 100);
+    setPreview() {
+        this.preview = new ImageLayer(0, 0, this.width, this.height, 100);
     }
 
-    addLayer(canvas) {
-        this.layers.push(new ImageLayer(this, canvas, 0, 0, this.width, this.height, this.layers.length));
+    addLayer() {
+        this.layers.push(new ImageLayer(0, 0, this.width, this.height, this.layers.length));
     }
 
-    print(context, imageLayer) {
-        context.drawImage(imageLayer.canvas, imageLayer.x, imageLayer.y);
+    setPalette(palette) {
+        this.palette = palette;
+        this.palette_id = palette.id;
     }
 
-    printFrom(context, order) {
-        for (let i = order; i < this.layers.length; i++) {
-            let imageLayer = this.layers[i];
+    // ImageLayer no longer has canvas so this will not work
+    // Layer handling is beyond the scope of the current program
+    // print(context, imageLayer) {
+    //     context.drawImage(imageLayer.canvas, imageLayer.x, imageLayer.y);
+    // }
 
-            if (layer.visible) {
-                this.print(context, imageLayer);
-            }
-        }
-    }
+    // printFrom(context, order) {
+    //     for (let i = order; i < this.layers.length; i++) {
+    //         let imageLayer = this.layers[i];
 
-    reorderLayers(context, first, second) {
-        let firstLayer = this.layers[first];
-        this.layers[first] = this.layers[second];
-        this.layers[second] = firstLayer;
-        this.printFrom(context, Math.min(first, second));
-    }
+    //         if (layer.visible) {
+    //             this.print(context, imageLayer);
+    //         }
+    //     }
+    // }
 
-    revealLayer(context, order) {
-        this.layers[order].visible = true;
-        this.printFrom(context, order);
-    }
+    // reorderLayers(context, first, second) {
+    //     let firstLayer = this.layers[first];
+    //     this.layers[first] = this.layers[second];
+    //     this.layers[second] = firstLayer;
+    //     this.printFrom(context, Math.min(first, second));
+    // }
 
-    hideLayer(context, order) {
-        this.layers[order].visible = false;
-        this.printFrom(context, 0);
-    }
+    // revealLayer(context, order) {
+    //     this.layers[order].visible = true;
+    //     this.printFrom(context, order);
+    // }
+
+    // hideLayer(context, order) {
+    //     this.layers[order].visible = false;
+    //     this.printFrom(context, 0);
+    // }
 
 
     startDrawing(context) {
@@ -508,6 +497,24 @@ export class Drawing {
 
         coordinates.forEach((position) => {
             this.setColor(data, position * 4, red, green, blue, 255);
+        });
+        context.putImageData(imageData, 0, 0);
+    }
+
+    changePalette(context, palette) {
+        // Changes image to fit palette
+        // Color are converted by index and the result will likely not look good
+        // Useful mainly for changing palettes on blank images
+        this.palette = palette;
+        let imageData = context.getImageData(0, 0, this.width, this.height);
+        let data = imageData.data;
+        let lastIndex = null;
+        let color = null;
+
+        this.image.indexedColors.forEach((item, index) => {
+            if (color === null || item !== lastItem) color = palette.getColorOfIndex(item);
+            this.setColor(data, index * 4, color.red, color.green, color.blue, color.alpha);
+            lastItem = item;
         });
         context.putImageData(imageData, 0, 0);
     }

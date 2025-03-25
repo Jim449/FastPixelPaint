@@ -144,7 +144,9 @@ def get_palette(id: int, user=Depends(get_user_or_none),
     """Returns a palette owned by the current user
     or an universal palette"""
     palette = db.execute(
-        select(model.Palette).where(model.Palette.id == id)).scalars().first()
+        select(model.Palette)
+        .options(joinedload(model.Palette.colors))
+        .where(model.Palette.id == id)).scalars().first()
 
     if not user:
         if palette.universal:

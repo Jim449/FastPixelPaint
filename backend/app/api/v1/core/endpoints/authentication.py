@@ -17,7 +17,6 @@ router = APIRouter(prefix="/auth")
 
 @router.post("/register", status_code=status.HTTP_201_CREATED)
 def register_user(user: schemas.UserRegister, db: Session = Depends(get_db)) -> schemas.UserOut:
-    # TODO ADD VALIDATION TO CREATION OF PASSWORD
     password_hash = hash_password(user.password)
     new_user = model.User(
         **user.model_dump(exclude={"password"}), password_hash=password_hash

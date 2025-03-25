@@ -6,18 +6,17 @@ import ColorPicker from "src/components/ColorPicker";
 import MessageWindow from "src/components/MessageWindow";
 import FileSystem from "src/components/FileSystem";
 import { getDot, getLine, getStraightLine, getCircle, getEllipse, fillEllipse, getRectangle, fillRectangle } from "src/scripts/geometry";
-import { Drawing, PaletteColor } from "src/scripts/drawing";
+import { Drawing, ImageLayer, PaletteColor } from "src/scripts/drawing";
 import { authStore } from "src/store/authStore";
 import { useNavigate } from "react-router-dom";
-import { hexToColor, rgbToHex, getPalette, Palette } from "../scripts/drawing";
+import { hexToColor, rgbToHex, Palette } from "../scripts/drawing";
 
 export default function Paint() {
     const { token } = authStore();
-    const userData = authStore((state) => state.userData);
-    const fetchUser = authStore((state) => state.fetchUser);
 
     const [canvasWidth, setCanvasWidth] = useState(300);
     const [canvasHeight, setCanvasHeight] = useState(300);
+    const [zoomLevel, setZoomLevel] = useState(1);
     const [coordinates, setCoordinates] = useState([0, 0]);
     const [palette, setPalette] = useState([]);
     const [menu, setMenu] = useState("");
@@ -39,6 +38,7 @@ export default function Paint() {
     // I do have color states but I need mutable objects
     const primaryCRef = useRef({});
     const secondaryCRef = useRef({});
+    const zoomRef = useRef(1);
     const navigate = useNavigate();
 
     let canvasLeftDown = false;
@@ -52,7 +52,7 @@ export default function Paint() {
 
     const fileOptions = [
         { label: "New", type: "button", action: () => { } },
-        { label: "Open", type: "button", action: () => { } },
+        { label: "Open", type: "button", action: imageOpenMenu },
         {
             label: "Save", type: "button", action: () => {
                 saveImage(drawing.current, token, "POST");
@@ -61,28 +61,44 @@ export default function Paint() {
         { label: "Save next", type: "button", action: () => { } },
         { label: "Save as...", type: "button", action: imageSaveMenu },
         { label: "Export", type: "button", action: downloadImage },
-        { label: "Open and generate palette", type: "button", action: () => { } },
-        { label: "Open with current palette", type: "button", action: () => { } },
-        { label: "Open text editor", type: "button", action: () => { } },
+        // { label: "Open and generate palette", type: "button", action: () => { } },
+        // { label: "Open with current palette", type: "button", action: () => { } },
+        // { label: "Open text editor", type: "button", action: () => { } },
         { label: "Close painter", type: "button", action: () => { navigate("/") } }
     ];
 
     const editOptions = [
-        { label: "Undo", type: "button", action: () => { } },
-        { label: "Redo", type: "button", action: () => { } },
-        { label: "Copy", type: "button", action: () => { } },
-        { label: "Cut", type: "button", action: () => { } },
-        { label: "Paste", type: "button", action: () => { } },
-        { label: "Scale image", type: "button", action: () => { } },
-        { label: "Resize canvas", type: "button", action: () => { } }
+        // { label: "Undo", type: "button", action: () => { } },
+        // { label: "Redo", type: "button", action: () => { } },
+        // { label: "Copy", type: "button", action: () => { } },
+        // { label: "Cut", type: "button", action: () => { } },
+        // { label: "Paste", type: "button", action: () => { } },
+        // { label: "Scale image", type: "button", action: () => { } },
+        // { label: "Resize canvas", type: "button", action: () => { } }
     ];
 
     const viewOptions = [
-        { label: "Zoom", type: "button", action: () => { } },
-        { label: "Revert zoom", type: "button", action: () => { } },
-        { label: "Toggle grid", type: "button", action: () => { } },
-        { label: "Set grid size", type: "button", action: () => { } },
-        { label: "Snap to grid", type: "button", action: () => { } }
+        {
+            label: "Zoom in", type: "button", action: () => {
+                setZoomLevel(Math.min(zoomLevel * 2, 8));
+                zoomRef.current = Math.min(zoomRef.current * 2, 8);
+            }
+        },
+        {
+            label: "Zoom out", type: "button", action: () => {
+                setZoomLevel(Math.max(zoomLevel / 2, 0.25));
+                zoomRef.current = Math.max(zoomRef.current / 2, 0.25);
+            }
+        },
+        {
+            label: "Revert zoom", type: "button", action: () => {
+                setZoomLevel(1);
+                zoomRef.current = 1;
+            }
+        },
+        // { label: "Toggle grid", type: "button", action: () => { } },
+        // { label: "Set grid size", type: "button", action: () => { } },
+        // { label: "Snap to grid", type: "button", action: () => { } }
     ];
 
     const paletteOptions = [
@@ -102,14 +118,14 @@ export default function Paint() {
                 }
             }
         },
-        { label: "Resize to 4x4", type: "button", action: () => { } },
-        { label: "Resize to 8x8", type: "button", action: () => { } },
-        { label: "Resize to 16x16", type: "button", action: () => { } }
+        // { label: "Resize to 4x4", type: "button", action: () => { } },
+        // { label: "Resize to 8x8", type: "button", action: () => { } },
+        // { label: "Resize to 16x16", type: "button", action: () => { } }
     ];
 
     const settingsOptions = [
-        { label: "Color mode", type: "button", action: () => { } },
-        { label: "Save actions", type: "button", action: () => { } }
+        // { label: "Color mode", type: "button", action: () => { } },
+        // { label: "Save actions", type: "button", action: () => { } }
     ];
 
     const drawingTools = ["Pencil", "Dotter", "Bucket", "Eraser", "Dithering pencil", "Dithering bucket"];
@@ -141,10 +157,25 @@ export default function Paint() {
     }
 
 
+    function imageOpenMenu() {
+        setFile({
+            mode: "Open image", action: (image) => {
+                openImage(image.id, token);
+                openPalette(drawing.current.palette_id, token);
+            }
+        })
+    }
+
+
     async function saveLayer(layer, token, method) {
         // Saves the image layer
         try {
             let path;
+
+            let body = {
+                content: layer.indexedColors, image_id: layer.image_id,
+                order: layer.order
+            }
 
             if (method === "PUT") path = `http://localhost:8000/v1/layer/${layer.id}`;
             else if (method === "POST") path = `http://localhost:8000/v1/layer`;
@@ -157,7 +188,7 @@ export default function Paint() {
                         "Authorization": `Bearer ${token}`,
                         "Content-Type": "application/json"
                     },
-                    body: JSON.stringify(layer)
+                    body: JSON.stringify(body)
                 });
             const data = await response.json();
 
@@ -180,6 +211,10 @@ export default function Paint() {
         // Saves the current image
         try {
             let path;
+            let body = {
+                name: image.name, width: image.width, height: image.height,
+                folder_id: image.folder_id, palette_id: image.palette_id
+            };
 
             if (method === "PUT") path = `http://localhost:8000/v1/image/${image.id}`;
             else if (method === "POST") path = `http://localhost:8000/v1/image`;
@@ -192,13 +227,14 @@ export default function Paint() {
                         "Authorization": `Bearer ${token}`,
                         "Content-Type": "application/json"
                     },
-                    body: JSON.stringify(image)
+                    body: JSON.stringify(body)
                 });
             const data = await response.json();
 
             if (response.ok) {
                 drawing.current.id = data.id;
-                saveLayer(image.image, token, method);
+                drawing.current.image.image_id = data.id;
+                saveLayer(drawing.current.image, token, method);
             }
             else throw new Error("Error when saving image");
         }
@@ -303,6 +339,72 @@ export default function Paint() {
     }
 
 
+    async function openPalette(id, token) {
+        // Returns a palette with a specific id or the users default palette 
+        try {
+            let path = (id === null) ? "http://localhost:8000/v1/default_palette" : `http://localhost:8000/v1/palette/${id}`;
+
+            const response = await fetch(path,
+                {
+                    method: "GET",
+                    headers: { Authorization: `Bearer ${token}` },
+                });
+            const data = await response.json();
+
+            if (!response.ok) throw new Error("Error when fetching palette");
+
+            let palette = new Palette(data);
+            let colors = palette.getColors();
+            drawing.current.setPalette(palette);
+            setPalette(colors);
+            // The primary and secondary colors have to be fetched from the palette
+            // Color 0 and 7 are kind of random but they'll do for now
+            setPrimaryColor(new PaletteColor(colors[0].red, colors[0].green, colors[0].blue,
+                colors[0].index, colors[0].order));
+            setSecondaryColor(new PaletteColor(colors[7].red, colors[7].green,
+                colors[7].blue, colors[7].index, colors[7].order));
+            primaryCRef.current = new PaletteColor(colors[0].red, colors[0].green, colors[0].blue,
+                colors[0].index, colors[0].order);
+            secondaryCRef.current = new PaletteColor(colors[7].red, colors[7].green,
+                colors[7].blue, colors[7].index, colors[7].order);
+            return palette;
+        }
+        catch {
+            return false;
+        }
+    }
+
+
+    async function openImage(id, token) {
+        // Opens an image
+        try {
+            let path = `http://localhost:8000/v1/image/${id}`;
+
+            const response = await fetch(path,
+                {
+                    method: "GET",
+                    headers: { Authorization: `Bearer ${token}` },
+                });
+            const data = await response.json();
+
+            if (!response.ok) throw new Error("Error when fetching image");
+
+            let layer = data.layers[0];
+
+            drawing.current = new Drawing(width = data.width, height = data.height,
+                palette_id = data.palette_id, folder_id = data.folder_id,
+                image_name = data.name, order = data.order, version = data.version);
+            drawing.current.image = new ImageLayer(x = 0, y = 0, width = data.width, height = data.height, order = 0, id = layer.id);
+            drawing.current.image.indexedColors = layer.content;
+        }
+        catch {
+            setFile(null);
+            setMessage("An error occurred when attempting to open the image.")
+            return false;
+        }
+    }
+
+
     function onMenuOpen(event) {
         // Toggles dropdown menu
         if (menu == event.target.id) {
@@ -383,12 +485,6 @@ export default function Paint() {
         blue = Math.max(Math.min(Number(blue), 255), 0);
         let color = rgbToHex(red, green, blue);
 
-        // let newPalette = [...palette];
-        // newPalette[order] = {
-        //     color: color,
-        //     index: index,
-        //     order: order
-        // };
         drawing.current.changeColor(canvasRef.current.getContext("2d"),
             index, order, red, green, blue);
         setPalette(drawing.current.palette.getColors());
@@ -438,7 +534,7 @@ export default function Paint() {
             if (drawingTools.includes(activeTool.current.tool)) {
                 const context = canvasRef.current.getContext("2d");
 
-                if (activeTool.current.tool === "Pencil") {
+                if (activeTool.current.tool === "Pencil" || activeTool.current.tool === "Eraser") {
                     drawing.current.addToDrawing(context, overlayRef.current, activeTool.current,
                         getLine(lastPoint[0], lastPoint[1],
                             currentPoint[0], currentPoint[1]));
@@ -536,7 +632,7 @@ export default function Paint() {
             }
         }
         lastPoint = [...currentPoint];
-        // setCoordinates([...currentPoint]);
+
         if (currentPoint[0] >= 0 && currentPoint[0] < canvasWidth
             && currentPoint[1] >= 0 && currentPoint[1] < canvasHeight) {
             setCoordinates([...currentPoint]);
@@ -551,8 +647,8 @@ export default function Paint() {
     const onMove = useCallback((event) => {
         // Called on mouse movement
         let rect = canvasRef.current.getBoundingClientRect();
-        let x = Math.round(event.clientX - rect.left);
-        let y = Math.round(event.clientY - rect.top);
+        let x = Math.round((event.clientX - rect.left) / zoomRef.current);
+        let y = Math.round((event.clientY - rect.top) / zoomRef.current);
         shiftDown = (event.shiftKey) ? true : false;
         currentPoint = [x, y];
 
@@ -647,35 +743,14 @@ export default function Paint() {
         docRef.current.addEventListener("mouseup", onRelease);
 
         window.oncontextmenu = (event) => { event.preventDefault() }
+        openPalette(null, token);
 
-        // Had to do async or I'd just get a promise
-        // Or I could just move back getPalette again
-        const fetchPalette = async () => {
-            let paletteObject = await getPalette(null, token);
-            let colors = paletteObject.getColors();
-            drawing.current.palette = paletteObject;
-            setPalette(colors);
-            // The primary and secondary colors have to be fetched from the palette
-            // Color 0 and 7 are kind of random but they'll do for now
-            setPrimaryColor(new PaletteColor(colors[0].red, colors[0].green, colors[0].blue,
-                colors[0].index, colors[0].order));
-            setSecondaryColor(new PaletteColor(colors[7].red, colors[7].green,
-                colors[7].blue, colors[7].index, colors[7].order));
-            primaryCRef.current = new PaletteColor(colors[0].red, colors[0].green, colors[0].blue,
-                colors[0].index, colors[0].order);
-            secondaryCRef.current = new PaletteColor(colors[7].red, colors[7].green,
-                colors[7].blue, colors[7].index, colors[7].order);
-
-            // I don't need to draw but I do need to set that willReadFrequently option
-            // If I don't do that now it might be too late
-            let context = canvasRef.current.getContext("2d", { willReadFrequently: true });
-        }
-        fetchPalette();
-
+        // I don't need to draw but I do need to set that willReadFrequently option
+        // If I don't do that now it might be too late
+        let context = canvasRef.current.getContext("2d", { willReadFrequently: true });
         loopId = requestAnimationFrame(drawingLoop);
-
-        drawing.current.setImage(canvasRef);
-        drawing.current.setPreview(overlayRef);
+        drawing.current.setImage();
+        drawing.current.setPreview();
 
         return () => {
             docRef.current.removeEventListener("mousemove", onMove);
@@ -743,7 +818,7 @@ export default function Paint() {
             </nav>
         </div>
         {/* Needed min-h-full to lower height and enforce scroll */}
-        <div className="flex grow min-h-full">
+        <div className="flex grow min-h-full min-w-full">
             <div className="flex flex-col border-r border-gray-300 bg-white">
                 <nav>
                     <ul className="grid grid-cols-2 text-xs p-1 m-1 bg-white border-y border-gray-300">
@@ -765,14 +840,17 @@ export default function Paint() {
             </div>
             {/* Box-sizing and -4 positioning ensures border can be fully covered by canvas */}
             <div className="flex flex-col grow items-center overflow-scroll bg-gray-300">
-                <div className="bg-gray-300 w-[360px] min-h-[60px]"></div>
+                <div className="bg-gray-300"
+                    style={{ width: canvasWidth * zoomLevel + 60, height: 60 }}></div>
                 <div
-                    className="relative w-[300px] h-[300px] bg-gray-300 box-border border-4 border-dashed border-gray-200">
+                    className="relative bg-gray-300 box-border border-4 border-dashed border-gray-200"
+                    style={{ width: canvasWidth * zoomLevel, height: canvasHeight * zoomLevel }}>
                     <canvas
                         id="canvas"
                         ref={canvasRef}
                         width={canvasWidth}
                         height={canvasHeight}
+                        style={{ width: canvasWidth * zoomLevel, height: canvasHeight * zoomLevel }}
                         className="absolute top-[-4px] left-[-4px] w-[300px] h-[300px] z-0">
                     </canvas>
                     <canvas
@@ -780,11 +858,12 @@ export default function Paint() {
                         ref={overlayRef}
                         width={canvasWidth}
                         height={canvasHeight}
+                        style={{ width: canvasWidth * zoomLevel, height: canvasHeight * zoomLevel }}
                         className="absolute top-[-4px] left-[-4px] w-[300px] h-[300px] z-10">
                     </canvas>
                 </div>
-
-                <div className="bg-gray-300 w-[360px] min-h-[60px]"></div>
+                <div className="bg-gray-300"
+                    style={{ width: canvasWidth * zoomLevel + 60, height: 60 }}></div>
             </div>
             <div className="flex flex-col border-l border-l-gray-300">
                 <div className="grid grid-cols-16 gap-0 p-1 m-1 bg-gray-100 border border-gray-300">
