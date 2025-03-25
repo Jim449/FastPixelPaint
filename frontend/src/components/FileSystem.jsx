@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react"
+import React, { useState, useEffect, useRef } from "react"
 import { authStore } from "src/store/authStore"
 
 export default function FileSystem({ mode, action, onCancel }) {
@@ -17,7 +17,7 @@ export default function FileSystem({ mode, action, onCancel }) {
     const [overwrite, setOverwrite] = useState(null);
     const [path, setPath] = useState([]);
 
-    let selected = null;
+    const selected = useRef(null);
 
     async function openFolder(token, id) {
         // Opens the folder with the given id. Enter null for root folder
@@ -33,8 +33,8 @@ export default function FileSystem({ mode, action, onCancel }) {
                 setParentFolder({ ...data.parent_folder, type: "Parent folder", order: 0 });
                 setActiveFolder({ ...data.current_folder, type: "Current folder" });
                 setFolders(sortItems(data.folders, "Folder"));
-                setImages(sortItems(data.images, "Images"));
-                setPalettes(sortItems(data.palettes, "Palettes"));
+                setImages(sortItems(data.images, "Image"));
+                setPalettes(sortItems(data.palettes, "Palette"));
                 setCurrentFolder(data.current_folder.id);
                 setPathList(data.current_folder.path);
             }
@@ -118,22 +118,22 @@ export default function FileSystem({ mode, action, onCancel }) {
         // Opens the selected item
         // Folders are opened
         // Images or palettes are handled according to a passed function
-        if (!selected) return;
-        else if (selected.type === "Folder" || selected.type === "Parent folder") {
-            openFolder(token, selected.id);
+        if (!selected.current) return;
+        else if (selected.current.type === "Folder" || selected.current.type === "Parent folder") {
+            openFolder(token, selected.current.id);
         }
-        else if ((mode === "Open image" || mode === "Open") && selected.type === "Image") {
-            action(selected);
+        else if ((mode === "Open image" || mode === "Open") && selected.current.type === "Image") {
+            action(selected.current);
         }
-        else if ((mode === "Open palette" || mode === "Open") && selected.type === "Palette") {
-            action(selected);
+        else if ((mode === "Open palette" || mode === "Open") && selected.current.type === "Palette") {
+            action(selected.current);
         }
     }
 
 
     function handleDoubleClick(item) {
         // Opens or overwrites the selected item
-        selected = item;
+        selected.current = item;
         if (!mode || mode.includes("Open")) handleOpen(null);
     }
 
@@ -151,13 +151,8 @@ export default function FileSystem({ mode, action, onCancel }) {
 
 
     function select(item) {
-        // Sets the selected item
-        // TODO it should be possible to navigate using arrows
-        // or even something like ctrl/shift-click
-        // I could set a flag so I don't have to rely on focus:bg
-        // Or add an action listener to tab: selected = null; 
-        selected = item;
-        console.log(selected);
+        // Sets the selected item 
+        selected.current = item;
     }
 
 

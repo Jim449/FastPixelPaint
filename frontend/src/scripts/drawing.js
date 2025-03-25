@@ -170,15 +170,13 @@ export class ImageLayer {
 
 export class Drawing {
     constructor(width, height, id = null, palette_id = null, folder_id = null,
-        image_name = null, order = null, version = null) {
+        image_name = null) {
         this.width = width;
         this.height = height;
         this.id = id;
         this.palette_id = palette_id;
         this.folder_id = folder_id;
         this.name = image_name;
-        this.order = order;
-        this.version = version;
         this.layers = [];
         this.history = [];
         this.historyIndex = -1;

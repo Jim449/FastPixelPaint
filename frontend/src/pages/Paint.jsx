@@ -160,8 +160,8 @@ export default function Paint() {
     function imageOpenMenu() {
         setFile({
             mode: "Open image", action: (image) => {
+                setFile(null);
                 openImage(image.id, token);
-                openPalette(drawing.current.palette_id, token);
             }
         })
     }
@@ -339,7 +339,7 @@ export default function Paint() {
     }
 
 
-    async function openPalette(id, token) {
+    async function openPalette(id, token, rebuild = false) {
         // Returns a palette with a specific id or the users default palette 
         try {
             let path = (id === null) ? "http://localhost:8000/v1/default_palette" : `http://localhost:8000/v1/palette/${id}`;
@@ -367,10 +367,14 @@ export default function Paint() {
                 colors[0].index, colors[0].order);
             secondaryCRef.current = new PaletteColor(colors[7].red, colors[7].green,
                 colors[7].blue, colors[7].index, colors[7].order);
+
+            if (rebuild) {
+                drawing.current.buildImage(canvasRef.current.getContext("2d"));
+            }
             return palette;
         }
-        catch {
-            return false;
+        catch (error) {
+            console.log(error);
         }
     }
 
@@ -391,16 +395,15 @@ export default function Paint() {
 
             let layer = data.layers[0];
 
-            drawing.current = new Drawing(width = data.width, height = data.height,
-                palette_id = data.palette_id, folder_id = data.folder_id,
-                image_name = data.name, order = data.order, version = data.version);
-            drawing.current.image = new ImageLayer(x = 0, y = 0, width = data.width, height = data.height, order = 0, id = layer.id);
+            drawing.current = new Drawing(data.width, data.height, data.palette_id, data.folder_id, data.name);
+            drawing.current.image = new ImageLayer(0, 0, data.width, data.height, layer.order, layer.id, data.id);
             drawing.current.image.indexedColors = layer.content;
+            openPalette(data.palette_id, token, true);
         }
-        catch {
+        catch (error) {
             setFile(null);
             setMessage("An error occurred when attempting to open the image.")
-            return false;
+            console.log(error);
         }
     }
 

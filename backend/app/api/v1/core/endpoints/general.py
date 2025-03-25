@@ -18,17 +18,23 @@ def get_user(user=Depends(get_current_user),
 
 
 @router.get("/image/{id}", status_code=status.HTTP_200_OK)
-def get_image(id: int, user=Depends(get_user_or_none),
-              db: Session = Depends(get_db)) -> schema.Image:
+def get_image(id: int, user=Depends(get_user),
+              db: Session = Depends(get_db)):
     """Returns an image owned by the current user"""
     image = db.execute(
         select(model.Image)
-        .options(joinedload(model.Layer))
-        .where(model.Image.id == id)
-        .where(model.Image.user_id == user.id)).scalars().first()
-    if image == None:
+        .options(joinedload(model.Image.layers))
+        .where(model.Image.id == id)).scalars().first()
+    if not image:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
                             detail="No image found")
+
+    folder = db.execute(
+        select(model.Folder)
+        .where(model.Folder.id == image.folder_id)).scalars().first()
+    if folder.user_id != user.id:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,
+                            detail="Image is not owned by user")
     return image
 
 
@@ -140,7 +146,7 @@ def delete_image(id: int, user=Depends(get_current_user),
 
 @router.get("/palette/{id}", status_code=status.HTTP_200_OK)
 def get_palette(id: int, user=Depends(get_user_or_none),
-                db: Session = Depends(get_db)) -> schema.Palette:
+                db: Session = Depends(get_db)):
     """Returns a palette owned by the current user
     or an universal palette"""
     palette = db.execute(
@@ -148,14 +154,13 @@ def get_palette(id: int, user=Depends(get_user_or_none),
         .options(joinedload(model.Palette.colors))
         .where(model.Palette.id == id)).scalars().first()
 
-    if not user:
-        if palette.universal:
-            return palette
-    elif user.id == palette.user_id:
+    if palette.universal:
         return palette
-    else:
+    elif user == None or user.id != palette.user_id:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,
                             detail="Palette not accessible by current user")
+    elif user.id == palette.user_id:
+        return palette
 
 
 @router.post("/palette", status_code=status.HTTP_201_CREATED)
