@@ -13,6 +13,8 @@ import { hexToColor, rgbToHex, Palette } from "../scripts/drawing";
 
 export default function Paint() {
     const { token } = authStore();
+    const { imageId } = authStore();
+    const { paletteId } = authStore();
 
     const [canvasWidth, setCanvasWidth] = useState(300);
     const [canvasHeight, setCanvasHeight] = useState(300);
@@ -51,11 +53,17 @@ export default function Paint() {
     let menuLabels = ["File", "Edit", "View", "Palette", "Settings"];
 
     const fileOptions = [
-        { label: "New", type: "button", action: () => { } },
+        {
+            label: "New", type: "button", action: () => {
+                newImage(
+                    drawing.current.width, drawing.current.height, drawing.current.palette_id)
+            }
+        },
+        { label: "New with palette...", type: "button", action: paletteOpenMenu },
         { label: "Open", type: "button", action: imageOpenMenu },
         {
             label: "Save", type: "button", action: () => {
-                saveImage(drawing.current, token, "POST");
+                saveImage(drawing.current, token, "PUT");
             }
         },
         { label: "Save next", type: "button", action: () => { } },
@@ -95,7 +103,7 @@ export default function Paint() {
                 setZoomLevel(1);
                 zoomRef.current = 1;
             }
-        },
+        }
         // { label: "Toggle grid", type: "button", action: () => { } },
         // { label: "Set grid size", type: "button", action: () => { } },
         // { label: "Snap to grid", type: "button", action: () => { } }
@@ -108,7 +116,7 @@ export default function Paint() {
             }
         },
         { label: "Save palette as...", type: "button", action: paletteSaveMenu },
-        { label: "Switch palette", type: "button", action: () => { } },
+        // { label: "Switch palette", type: "button", action: () => { } },
         {
             label: "Select as default", type: "button", action: () => {
                 if (drawing.current.palette.universal) {
@@ -167,6 +175,30 @@ export default function Paint() {
     }
 
 
+    function newImage(width, height, palette_id = null) {
+        // Creates an empty image with the given width, height and palette
+        canvasRef.current.getContext("2d").clearRect(
+            0, 0, drawing.current.width, drawing.current.height);
+        drawing.current = new Drawing(width, height, palette_id);
+        drawing.current.setImage();
+        drawing.current.setPreview();
+        setCanvasWidth(width);
+        setCanvasHeight(height);
+    }
+
+
+    function paletteOpenMenu() {
+        // Opens a new palette and creates an empty image
+        setFile({
+            mode: "Open palette", action: (palette) => {
+                newImage(drawing.current.width, drawing.current.height, palette.id);
+                setFile(null);
+                openPalette(palette.id, token, false);
+            }
+        })
+    }
+
+
     async function saveLayer(layer, token, method) {
         // Saves the image layer
         try {
@@ -215,6 +247,7 @@ export default function Paint() {
                 name: image.name, width: image.width, height: image.height,
                 folder_id: image.folder_id, palette_id: image.palette_id
             };
+            console.log(body);
 
             if (method === "PUT") path = `http://localhost:8000/v1/image/${image.id}`;
             else if (method === "POST") path = `http://localhost:8000/v1/image`;
@@ -395,9 +428,10 @@ export default function Paint() {
 
             let layer = data.layers[0];
 
-            drawing.current = new Drawing(data.width, data.height, data.palette_id, data.folder_id, data.name);
+            drawing.current = new Drawing(data.width, data.height, data.id, data.palette_id, data.folder_id, data.name);
             drawing.current.image = new ImageLayer(0, 0, data.width, data.height, layer.order, layer.id, data.id);
             drawing.current.image.indexedColors = layer.content;
+            drawing.current.setPreview();
             openPalette(data.palette_id, token, true);
         }
         catch (error) {
@@ -746,14 +780,23 @@ export default function Paint() {
         docRef.current.addEventListener("mouseup", onRelease);
 
         window.oncontextmenu = (event) => { event.preventDefault() }
-        openPalette(null, token);
 
         // I don't need to draw but I do need to set that willReadFrequently option
         // If I don't do that now it might be too late
         let context = canvasRef.current.getContext("2d", { willReadFrequently: true });
         loopId = requestAnimationFrame(drawingLoop);
-        drawing.current.setImage();
-        drawing.current.setPreview();
+
+        if (imageId) {
+            openImage(imageId, token);
+        }
+        else if (paletteId) {
+            newImage(300, 300, paletteId);
+            openPalette(paletteId, token, false);
+        }
+        else {
+            newImage(300, 300);
+            openPalette(null, token, false);
+        }
 
         return () => {
             docRef.current.removeEventListener("mousemove", onMove);

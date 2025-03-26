@@ -5,13 +5,22 @@ import { useNavigate } from "react-router-dom";
 
 export default function Files() {
 
-    function testOpen(file) {
-        console.log(file);
-        // TODO Should have a way to seperate images and palettes
-        // Set authStore variables paletteId, imageId
-        // Do a useNavigate to /paint
-        // Make sure the right palette and image is opened
+    const setImage = authStore((state) => state.setImage);
+    const setPalette = authStore((state) => state.setPalette);
+    const navigate = useNavigate();
+
+    function open(file) {
+        if (file.type === "Image") {
+            setImage(file.id);
+            setPalette(file.palette_id);
+            navigate("/paint");
+        }
+        else if (file.type === "Palette") {
+            setImage(null);
+            setPalette(file.id);
+            navigate("/paint");
+        }
     }
 
-    return <FileSystem mode={"Open"} action={testOpen} onCancel={null}></FileSystem>
+    return <FileSystem mode={"Open"} action={open} onCancel={null}></FileSystem>
 }

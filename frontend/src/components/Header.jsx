@@ -1,11 +1,8 @@
-import React, { useEffect } from "react"
 import { Link, useNavigate } from "react-router"
 import { authStore } from "src/store/authStore"
 
 export default function Header() {
     const logout = authStore((state) => state.logout);
-    const fetchUser = authStore((state) => state.fetchUser);
-    const userData = authStore((state) => state.userData);
     const token = authStore((state) => state.token);
     const navigate = useNavigate();
 
@@ -13,10 +10,6 @@ export default function Header() {
         logout();
         navigate("/");
     }
-
-    useEffect(() => {
-        fetchUser();
-    }, []);
 
     return <div className="flex bg-gray-50 border-b border-gray-300">
         <nav className="flex flex-grow">

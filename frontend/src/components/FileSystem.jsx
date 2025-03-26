@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from "react"
 import { authStore } from "src/store/authStore"
 
 export default function FileSystem({ mode, action, onCancel }) {
+    const docRef = useRef(document);
     const token = authStore((state) => state.token);
     const folderId = authStore((state) => state.folderId);
     const rootId = authStore((state) => state.rootId);
@@ -37,6 +38,7 @@ export default function FileSystem({ mode, action, onCancel }) {
                 setPalettes(sortItems(data.palettes, "Palette"));
                 setCurrentFolder(data.current_folder.id);
                 setPathList(data.current_folder.path);
+                selected.current = null;
             }
         }
         catch (error) {
@@ -68,6 +70,32 @@ export default function FileSystem({ mode, action, onCancel }) {
             console.log(error);
         }
     }
+
+
+    async function deleteFile(token, file) {
+        let url;
+
+        if (file.type == "Image") url = `http://localhost:8000/v1/image/${selected.current.id}`;
+        else if (file.type == "Palette") url = `http://localhost:8000/v1/palette/${selected.current.id}`;
+        else if (file.type == "Folder") url = `http://localhost:8000/v1/folder/${selected.current.id}`;
+
+        try {
+            const response = await fetch(url, {
+                method: "DELETE",
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            if (response.status === 204) {
+                if (file.type == "Image") setImages(images.filter((item) => item.id !== selected.id));
+                else if (file.type == "Palette") setPalettes(palettes.filter((item) => item.id !== selected.id));
+                else if (file.type == "Folder") setFolders(folders.filter((item) => item.id !== selected.id));
+                selected.current = null;
+            }
+        }
+        catch (error) {
+            console.log(error);
+        }
+    }
+
 
     function setPathList(path) {
         // Splits a path into an array of folders, containing paths and names
@@ -156,6 +184,15 @@ export default function FileSystem({ mode, action, onCancel }) {
     }
 
 
+    function onKeydown(event) {
+        console.log("Key " + event.code + " pressed!");
+        // 46: delete key
+        if (event.code == "Delete" && selected.current !== null) {
+            deleteFile(token, selected.current);
+        }
+    }
+
+
     async function createFolder(token, parent, name) {
         // Creates a new folder
         setNameField(false);
@@ -192,6 +229,11 @@ export default function FileSystem({ mode, action, onCancel }) {
         }
         else {
             openFolder(token, null);
+        }
+        docRef.current.addEventListener("keydown", onKeydown);
+
+        return () => {
+            docRef.current.removeEventListener("keydown", onKeydown);
         }
     }, []);
 
@@ -268,7 +310,7 @@ export default function FileSystem({ mode, action, onCancel }) {
                     tabIndex={-1}>
                     <td className="m-1 w-24">Palette</td>
                     <td className="m-1 grow overflow-ellipsis">{item.name}</td>
-                    <td className="m-1 w-24">(add later)</td>
+                    <td className="m-1 w-24"></td>
                     <td className="m-1 w-24">{new Date(item.updated).toDateString()}</td>
                 </tr>)}
             </tbody>

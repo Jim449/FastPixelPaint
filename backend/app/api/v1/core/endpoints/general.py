@@ -132,7 +132,7 @@ def set_layer(layer: schema.Layer,
 def delete_image(id: int, user=Depends(get_current_user),
                  db: Session = Depends(get_db)):
     image = db.execute(
-        select(model.Palette).where(model.Palette.id == id)).scalars().first()
+        select(model.Image).where(model.Image.id == id)).scalars().first()
     layer = db.execute(
         select(model.Layer).where(model.Layer.image_id == image.id)).scalars().first()
 
@@ -228,6 +228,19 @@ def delete_palette(id: int, user=Depends(get_current_user),
     db.execute(
         delete(model.Color).where(model.Color.palette_id == id))
     db.delete(palette)
+    db.commit()
+
+
+@router.delete("/folder/{id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_folder(id: int, user=Depends(get_current_user),
+                  db: Session = Depends(get_db)):
+    folder = db.execute(
+        select(model.Folder).where(model.Folder.id == id)).scalars().first()
+
+    if folder.user_id != user.id:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,
+                            detail="Cannot delete other users folders")
+    db.delete(folder)
     db.commit()
 
 
