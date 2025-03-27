@@ -208,6 +208,7 @@ export default function Paint() {
                 content: layer.indexedColors, image_id: layer.image_id,
                 order: layer.order
             }
+            console.log(body);
 
             if (method === "PUT") path = `http://localhost:8000/v1/layer/${layer.id}`;
             else if (method === "POST") path = `http://localhost:8000/v1/layer`;

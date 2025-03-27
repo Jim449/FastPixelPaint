@@ -48,7 +48,7 @@ export default function FileSystem({ mode, action, onCancel }) {
 
     async function searchFolder(token, path) {
         // Opens the folder with the given path
-        let url = `http://localhost:8000/v1/path?path=${path}`;
+        let url = `http://localhost:8000/v1/path?pathname=${path}`;
 
         try {
             const response = await fetch(url, {
@@ -59,11 +59,12 @@ export default function FileSystem({ mode, action, onCancel }) {
                 const data = await response.json();
                 setParentFolder({ ...data.parent_folder, type: "Parent folder", order: 0 });
                 setActiveFolder({ ...data.current_folder, type: "Current folder" });
-                setFolders(sort(data.folders, "Folder"));
-                setImages(sort(data.images, "Image"));
-                setPalettes(sort(data.palettes, "Palette"));
+                setFolders(sortItems(data.folders, "Folder"));
+                setImages(sortItems(data.images, "Image"));
+                setPalettes(sortItems(data.palettes, "Palette"));
                 setCurrentFolder(data.current_folder.id);
                 setPathList(data.current_folder.path);
+                selected.current = null;
             }
         }
         catch (error) {

@@ -62,11 +62,11 @@ def set_image(id, image: schema.Image,
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,
                             detail="User cannot access parent folder")
 
-    db_image = model.Image(**image.model_dump())
-    existing_image = db.execute(
+    db_image = db.execute(
         select(model.Image).where(model.Image.id == id)).scalars().first()
-    for key, value in db_image:
-        setattr(existing_image, key, value)
+
+    for key, value in image.model_dump().items():
+        setattr(db_image, key, value)
     db.commit()
     return db_image
 
@@ -89,26 +89,8 @@ def create_layer(layer: schema.Layer,
     return db_layer
 
 
-@router.put("/image/{id}", status_code=status.HTTP_200_OK)
-def set_image(id, image: schema.Image, layer: schema.Layer,
-              user=Depends(get_user_or_none), db: Session = Depends(get_db)):
-    folder = db.execute(
-        select(model.Folder).where(model.Folder.id == image.folder_id)).scalars().first()
-    if folder.user_id != user.id:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,
-                            detail="User cannot access parent folder")
-
-    db_image = model.Image(**image.model_dump())
-    existing_image = db.execute(
-        select(model.Image).where(model.Image.id == id)).scalars().first()
-    for key, value in db_image:
-        setattr(existing_image, key, value)
-    db.commit()
-    return db_image
-
-
 @router.put("/layer/{id}", status_code=status.HTTP_201_CREATED)
-def set_layer(layer: schema.Layer,
+def set_layer(id: int, layer: schema.Layer,
               user=Depends(get_user_or_none), db: Session = Depends(get_db)):
 
     folder = db.execute(
@@ -119,11 +101,11 @@ def set_layer(layer: schema.Layer,
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,
                             detail="User does not own image")
 
-    db_layer = model.Layer(**layer.model_dump())
-    existing_layer = db.execute(
+    db_layer = db.execute(
         select(model.Layer).where(model.Layer.id == id)).scalars().first()
-    for key, value in db_layer:
-        setattr(existing_layer, key, value)
+
+    for key, value in layer.model_dump().items():
+        setattr(db_layer, key, value)
     db.commit()
     return db_layer
 
@@ -135,8 +117,10 @@ def delete_image(id: int, user=Depends(get_current_user),
         select(model.Image).where(model.Image.id == id)).scalars().first()
     layer = db.execute(
         select(model.Layer).where(model.Layer.image_id == image.id)).scalars().first()
+    folder = db.execute(
+        select(model.Folder).where(model.Folder.id == model.Image.folder_id)).scalars().first()
 
-    if image.user_id != user.id:
+    if folder.user_id != user.id:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,
                             detail="Cannot delete other users image")
     db.delete(layer)
@@ -207,13 +191,13 @@ def set_palette(id: int, palette: schema.Palette, user=Depends(get_current_user)
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,
                             detail="User cannot access parent folder")
 
-    db_palette = model.Palette(**palette.model_dump())
-    existing = db.execute(
+    db_palette = db.execute(
         select(model.Palette).where(model.Palette.id == id)).scalars().first()
-    for key, value in db_palette:
-        setattr(existing, key, value)
-    db.palette.user_id = user.id
+
+    for key, value in palette.model_dump.items():
+        setattr(db_palette, key, value)
     db.commit()
+    return db_palette
 
 
 @router.delete("/palette/{id}", status_code=status.HTTP_204_NO_CONTENT)
