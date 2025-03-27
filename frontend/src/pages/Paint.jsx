@@ -5,6 +5,7 @@ import PaletteButton from "src/components/PaletteButton";
 import ColorPicker from "src/components/ColorPicker";
 import MessageWindow from "src/components/MessageWindow";
 import FileSystem from "src/components/FileSystem";
+import LoginForm from "src/components/LoginForm";
 import { getDot, getLine, getStraightLine, getCircle, getEllipse, fillEllipse, getRectangle, fillRectangle } from "src/scripts/geometry";
 import { Drawing, ImageLayer, PaletteColor } from "src/scripts/drawing";
 import { authStore } from "src/store/authStore";
@@ -26,7 +27,7 @@ export default function Paint() {
     const [tool, setTool] = useState("");
     const [primaryColor, setPrimaryColor] = useState(new PaletteColor(0, 0, 0, -1 - 1));
     const [secondaryColor, setSecondaryColor] = useState(new PaletteColor(255, 255, 255, -1 - 1));
-    const [loggedIn, setLoggedIn] = useState((token) ? true : false);
+    const [login, setLogin] = useState(false);
     const [file, setFile] = useState(null);
 
     const drawing = useRef(new Drawing(300, 300));
@@ -42,6 +43,7 @@ export default function Paint() {
     const secondaryCRef = useRef({});
     const zoomRef = useRef(1);
     const navigate = useNavigate();
+    const logoutUser = authStore((state) => state.logout);
 
     let canvasLeftDown = false;
     let canvasRightDown = false;
@@ -822,10 +824,12 @@ export default function Paint() {
                 action={file.action}
                 onCancel={() => setFile(null)}>
             </FileSystem>
-        </div>
-        }
+        </div>}
+        {login && <div className="absolute z-30 h-[480px] w-[480px] top-[50%] left-[50%] translate-[-50%]">
+            <LoginForm onLogin={() => setLogin(false)}></LoginForm>
+        </div>}
         <div className="flex border-b border-b-gray-300">
-            <nav>
+            <nav className="flex w-full">
                 <ul className="flex ml-3 mt-1 text-lg font-mercutio">
                     <li className="relative">
                         <button
@@ -868,6 +872,14 @@ export default function Paint() {
                         </button>
                         {menu == "Settings" && <Menu options={settingsOptions}></Menu>}
                     </li>
+                </ul>
+                <ul className="flex flex-grow justify-end ml-auto mr-3 mt-1 text-lg font-mercutio">
+                    {!token && <li><button
+                        className="cursor-pointer hover:bg-gray-200 pt-1 pb-2 px-3"
+                        onClick={(event) => setLogin(true)}>Login</button></li>}
+                    {token && <li><button
+                        className="cursor-pointer hover:bg-gray-200 pt-1 pb-2 px-3"
+                        onClick={logoutUser}>Logout</button></li>}
                 </ul>
             </nav>
         </div>
