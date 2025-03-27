@@ -150,9 +150,10 @@ export class ImageLayer {
     getColorCoordinates(colorIndex) {
         // Searches the layer for a specific color.
         // Returns a list of coordinates
-        // Note: the color to search for must be included in the colorSet
-        // and if the color isn't found, it is removed from the colorSet
-        if (!this.colorSet.includes(colorIndex)) return [];
+
+        // TODO in order to include this test,
+        // I'd need to either save colorSet in db or calculate when loading 
+        // if (!this.colorSet.includes(colorIndex)) return [];
 
         let result = [];
 
@@ -251,27 +252,22 @@ export class Drawing {
     }
 
 
-    addToDrawing(context, overlay, activeTool, shape) {
+    addToDrawing(context, activeTool, shape, startX, startY, dx, dy) {
         // Draws using a pencil etc. Drawing is immediately committed to canvas
-        let overlayContext = overlay.getContext("2d");
-        let imageData = overlayContext.createImageData(this.width, this.height);
+        let imageData = context.getImageData(startX, startY, dx, dy);
         let data = imageData.data;
 
         shape.forEach(coordinates => {
-            let dataIndex = (coordinates.y * this.width + coordinates.x) * 4;
+            let dataIndex = (coordinates.y * dx + coordinates.x) * 4;
 
-            if (coordinates.x >= 0 && coordinates.x < this.width) {
-                data[dataIndex] = activeTool.red;
-                data[dataIndex + 1] = activeTool.green;
-                data[dataIndex + 2] = activeTool.blue;
-                data[dataIndex + 3] = activeTool.alpha;
+            if (coordinates.x >= 0 && coordinates.x < dx) {
+                this.setColor(data, dataIndex, activeTool.red,
+                    activeTool.green, activeTool.blue, activeTool.alpha);
+                this.image.draw(startX + coordinates.x, startY + coordinates.y, activeTool.colorIndex);
             }
-            this.image.draw(coordinates.x, coordinates.y, activeTool.colorIndex);
         });
-        // this.savedShape.concat(shape);
 
-        overlayContext.putImageData(imageData, 0, 0);
-        context.drawImage(overlay, 0, 0);
+        context.putImageData(imageData, startX, startY);
         this.image.addToColorSet(activeTool.colorIndex);
     }
 

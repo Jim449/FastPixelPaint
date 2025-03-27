@@ -1,8 +1,8 @@
 export function getDot(x1, y1, width = 1) {
     let coordinates = [];
 
-    for (x = x1; x < x1 + width; x++) {
-        for (y = y1; y < y1 + width; y++) {
+    for (let x = x1; x < x1 + width; x++) {
+        for (let y = y1; y < y1 + width; y++) {
             coordinates.push({ x: x, y: y })
         }
     }

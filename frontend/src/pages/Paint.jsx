@@ -568,18 +568,25 @@ export default function Paint() {
     function drawingLoop(time) {
         // A drawing loop, called at 60 FPS or so
         if (canvasLeftDown || canvasRightDown) {
-
             if (drawingTools.includes(activeTool.current.tool)) {
                 const context = canvasRef.current.getContext("2d");
+                let startX = getStart(lastPoint[0], currentPoint[0]);
+                let startY = getStart(lastPoint[1], currentPoint[1]);
+                let dx = getLength(lastPoint[0], currentPoint[0]);
+                let dy = getLength(lastPoint[1], currentPoint[1]);
 
                 if (activeTool.current.tool === "Pencil" || activeTool.current.tool === "Eraser") {
-                    drawing.current.addToDrawing(context, overlayRef.current, activeTool.current,
-                        getLine(lastPoint[0], lastPoint[1],
-                            currentPoint[0], currentPoint[1]));
+                    drawing.current.addToDrawing(context, activeTool.current,
+                        getLine(getLineStart(lastPoint[0], currentPoint[0]),
+                            getLineStart(lastPoint[1], currentPoint[1]),
+                            getLineEnd(lastPoint[0], currentPoint[0]),
+                            getLineEnd(lastPoint[1], currentPoint[1])),
+                        startX, startY, dx, dy);
                 }
                 else if (activeTool.current.tool === "Dotter") {
-                    drawing.current.addToDrawing(context, overlayRef.current, activeTool.current,
-                        getDot(currentPoint[0], currentPoint[1]));
+                    drawing.current.addToDrawing(context, activeTool.current,
+                        getDot(0, 0),
+                        startX, startY, 1, 1);
                 }
             }
             else if (geometryTools.includes(activeTool.current.tool)) {
